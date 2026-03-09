@@ -76,7 +76,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div style={styles.root}>
+        <div style={styles.root} className="responsive-root">
             <style>{`
                 @keyframes spin { to { transform: rotate(360deg); } }
                 @keyframes pulse-orb {
@@ -98,11 +98,72 @@ export default function LoginPage() {
                 .sign-in-btn:not(:disabled):active {
                     transform: translateY(0);
                 }
+
+                /* Mobile Responsiveness */
+                @media (max-width: 992px) {
+                    .responsive-root {
+                        flex-direction: column !important;
+                        overflow-y: auto !important;
+                        overflow-x: hidden !important;
+                    }
+                    .responsive-left {
+                        flex: none !important;
+                    }
+                    .responsive-left-inner {
+                        padding: 40px 24px !important;
+                        height: auto !important;
+                    }
+                    .responsive-hero-block {
+                        padding-top: 40px !important;
+                        margin-top: 20px !important;
+                    }
+                    .responsive-hero-title {
+                        font-size: 32px !important;
+                    }
+                    .responsive-hero-title br {
+                        display: none;
+                    }
+                    .responsive-pill-row {
+                        flex-direction: row !important;
+                        flex-wrap: wrap !important;
+                        margin-top: 30px !important;
+                    }
+                    .responsive-sec-badge {
+                        padding-top: 40px !important;
+                        margin-top: 20px !important;
+                    }
+                    .responsive-right {
+                        flex: none !important;
+                        padding: 40px 24px 60px 24px !important;
+                        align-items: flex-start !important;
+                    }
+                    .responsive-form-card {
+                        max-width: 100% !important;
+                        margin: 0 auto !important;
+                    }
+                }
+
+                @media (max-width: 480px) {
+                    .responsive-hero-title {
+                        font-size: 28px !important;
+                        line-height: 1.3 !important;
+                    }
+                    .responsive-left-inner {
+                        padding: 30px 20px !important;
+                    }
+                    .responsive-right {
+                        padding: 30px 20px 60px 20px !important;
+                    }
+                    .responsive-form-title {
+                        font-size: 24px !important;
+                    }
+                }
             `}</style>
 
             {/* ── Left panel ─────────────────────────────── */}
             <motion.div
                 style={styles.left}
+                className="responsive-left"
                 variants={leftPanel}
                 initial="hidden"
                 animate="show"
@@ -129,6 +190,7 @@ export default function LoginPage() {
 
                 <motion.div
                     style={styles.leftInner}
+                    className="responsive-left-inner"
                     variants={stagger}
                     initial="hidden"
                     animate="show"
@@ -146,8 +208,8 @@ export default function LoginPage() {
                     </motion.div>
 
                     {/* Hero text */}
-                    <motion.div style={styles.heroBlock} variants={stagger}>
-                        <motion.h2 style={styles.heroTitle} variants={fadeUp}>
+                    <motion.div style={styles.heroBlock} className="responsive-hero-block" variants={stagger}>
+                        <motion.h2 style={styles.heroTitle} className="responsive-hero-title" variants={fadeUp}>
                             Powering smarter<br />infrastructure.
                         </motion.h2>
                         <motion.p style={styles.heroSub} variants={fadeUp}>
@@ -156,7 +218,7 @@ export default function LoginPage() {
                     </motion.div>
 
                     {/* Role pills */}
-                    <motion.div style={styles.pillRow} variants={stagger}>
+                    <motion.div style={styles.pillRow} className="responsive-pill-row" variants={stagger}>
                         {[
                             { icon: "⚡", label: "Super Admin", color: "#f59e0b" },
                             { icon: "📋", label: "Project Manager", color: "#60a5fa" },
@@ -175,7 +237,7 @@ export default function LoginPage() {
                     </motion.div>
 
                     {/* Security badge */}
-                    <motion.div style={styles.secBadge} variants={fadeUp}>
+                    <motion.div style={styles.secBadge} className="responsive-sec-badge" variants={fadeUp}>
                         <span style={{ opacity: 0.5, fontSize: "11px" }}>🔒</span>
                         <span style={{ opacity: 0.45, fontSize: "11px", letterSpacing: "0.05em" }}>
                             SECURED WITH JWT + BCRYPT ENCRYPTION
@@ -187,12 +249,14 @@ export default function LoginPage() {
             {/* ── Right panel ────────────────────────────── */}
             <motion.div
                 style={styles.right}
+                className="responsive-right"
                 variants={rightPanel}
                 initial="hidden"
                 animate="show"
             >
                 <motion.div
                     style={styles.formCard}
+                    className="responsive-form-card"
                     variants={stagger}
                     initial="hidden"
                     animate="show"
@@ -200,7 +264,7 @@ export default function LoginPage() {
                     {/* Header */}
                     <motion.div style={styles.formHeader} variants={fadeUp}>
                         <p style={styles.formEyebrow}>WELCOME BACK</p>
-                        <h1 style={styles.formTitle}>Sign in to your account</h1>
+                        <h1 style={styles.formTitle} className="responsive-form-title">Sign in to your account</h1>
                         <p style={styles.formSub}>
                             Use your registered phone number and date of birth.
                         </p>
