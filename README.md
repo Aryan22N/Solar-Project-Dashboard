@@ -2,6 +2,10 @@
 
 A role-based authentication system built with **Next.js 16**, **Neon Postgres**, **JWT**, **bcrypt**, and **Framer Motion**.
 
+🔗 **Live Demo:** [solar-project-dashboard.vercel.app](https://solar-project-dashboard.vercel.app)
+
+
+
 
 
 ## Roles
