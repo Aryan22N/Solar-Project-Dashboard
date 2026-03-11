@@ -1,8 +1,11 @@
-import { sql } from "@/lib/db";
+import { prisma } from "@/lib/db";
 import { loginSchema } from "@/lib/validators/loginSchema";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function POST(req) {
     try {
@@ -19,17 +22,19 @@ export async function POST(req) {
 
         const { phone, dob } = result.data;
 
-        // Look up user by phone using Neon serverless driver
-        const rows = await sql`SELECT * FROM users WHERE phone = ${phone}`;
+        // Look up user by phone using Prisma Client
+        const user = await prisma.user.findUnique({
+            where: {
+                phone: phone,
+            },
+        });
 
-        if (rows.length === 0) {
+        if (!user) {
             return NextResponse.json(
                 { error: "Invalid phone number or date of birth" },
                 { status: 401 }
             );
         }
-
-        const user = rows[0];
 
         // Compare DOB against bcrypt hash stored in DB
         const passwordMatch = await bcrypt.compare(dob, user.dob);
