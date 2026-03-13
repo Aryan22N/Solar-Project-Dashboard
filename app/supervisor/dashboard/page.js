@@ -1,51 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-
-const actions = [
-    {
-        icon: "🔧",
-        iconBg: "rgba(16,185,129,0.12)",
-        iconColor: "#10b981",
-        title: "Update Task Status",
-        desc: "Mark tasks as in-progress, complete, or blocked on site.",
-    },
-    {
-        icon: "📤",
-        iconBg: "rgba(59,130,246,0.12)",
-        iconColor: "#3b82f6",
-        title: "Upload Reports",
-        desc: "Submit daily site inspection photos and progress notes.",
-    },
-    {
-        icon: "📍",
-        iconBg: "rgba(245,158,11,0.12)",
-        iconColor: "#f59e0b",
-        title: "Site Check-in",
-        desc: "Mark your attendance and active hours on the current site.",
-    },
-    {
-        icon: "⚠️",
-        iconBg: "rgba(248,113,113,0.12)",
-        iconColor: "#f87171",
-        title: "Raise Issue",
-        desc: "Flag a site issue or safety concern for immediate review.",
-    },
-];
-
-const stats = [
-    { value: "6", label: "My Tasks", color: "#10b981" },
-    { value: "2", label: "Pending Today", color: "#f59e0b" },
-    { value: "4", label: "Completed", color: "#3b82f6" },
-    { value: "1", label: "Issues Open", color: "#f87171" },
-];
+import { useState } from "react";
+import PaymentRequestForm from "@/components/PaymentRequestForm";
+import PaymentRequestList from "@/components/PaymentRequestList";
 
 export default function SupervisorDashboard() {
     const router = useRouter();
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const handleLogout = async () => {
         await fetch("/api/logout", { method: "POST" });
         router.push("/login");
+    };
+
+    const handleSuccess = () => {
+        setRefreshTrigger(prev => prev + 1);
     };
 
     return (
@@ -72,11 +42,13 @@ export default function SupervisorDashboard() {
                         Good morning, Supervisor 👋
                     </h1>
                     <p style={{ color: "var(--text-muted)", fontSize: "15px" }}>
-                        You have 2 tasks pending for today's shift
+                        Submit and track material payment requests below.
                     </p>
                 </div>
 
-
+                <PaymentRequestForm onSuccess={handleSuccess} />
+                
+                <PaymentRequestList refreshTrigger={refreshTrigger} role="SUPERVISOR" />
 
             </main>
         </div>

@@ -1,65 +1,23 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-
-const actions = [
-    {
-        icon: "🏗️",
-        iconBg: "rgba(245,158,11,0.12)",
-        iconColor: "#f59e0b",
-        title: "Create Project",
-        desc: "Spin up a new solar installation project and assign the team.",
-    },
-    {
-        icon: "👥",
-        iconBg: "rgba(99,179,237,0.12)",
-        iconColor: "#63b3ed",
-        title: "Manage Users",
-        desc: "Add, remove or update project managers and supervisors.",
-    },
-    {
-        icon: "📊",
-        iconBg: "rgba(129,140,248,0.12)",
-        iconColor: "#818cf8",
-        title: "View Reports",
-        desc: "Access all project health, financials and audit reports.",
-    },
-    {
-        icon: "⚙️",
-        iconBg: "rgba(52,211,153,0.12)",
-        iconColor: "#34d399",
-        title: "System Settings",
-        desc: "Configure global portal settings and permissions.",
-    },
-    {
-        icon: "💰",
-        iconBg: "rgba(248,113,113,0.12)",
-        iconColor: "#f87171",
-        title: "Budget Overview",
-        desc: "Review total expenditure and budget allocation across all projects.",
-    },
-    {
-        icon: "📋",
-        iconBg: "rgba(167,139,250,0.12)",
-        iconColor: "#a78bfa",
-        title: "Audit Log",
-        desc: "See a full log of user activity and system events.",
-    },
-];
-
-const stats = [
-    { value: "12", label: "Active Projects", color: "#f59e0b" },
-    { value: "34", label: "Team Members", color: "#3b82f6" },
-    { value: "₹4.2Cr", label: "Total Budget", color: "#34d399" },
-    { value: "87%", label: "Completion Rate", color: "#818cf8" },
-];
+import PaymentRequestList from "@/components/PaymentRequestList";
+import Link from "next/link";
+import { useState } from "react";
+import ProjectCreationModal from "@/components/ProjectCreationModal";
 
 export default function SuperAdminDashboard() {
     const router = useRouter();
+    const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
 
     const handleLogout = async () => {
         await fetch("/api/logout", { method: "POST" });
         router.push("/login");
+    };
+
+    const handleProjectCreated = (newProject) => {
+        console.log("Project created:", newProject);
+        // Optionally refresh project lists if they exist
     };
 
     return (
@@ -73,8 +31,23 @@ export default function SuperAdminDashboard() {
                     <span className="logo-text">Solar Portal</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                    <span className="role-badge role-super">⚡ Super Admin</span>
-                    <button className="btn-ghost" onClick={handleLogout}>Sign Out</button>
+                    <button 
+                        className="btn-primary" 
+                        style={{ 
+                            padding: "8px 18px", 
+                            fontSize: "13px", 
+                            width: "auto", 
+                            display: "inline-flex", 
+                            alignItems: "center",
+                            height: "36px"
+                        }} 
+                        onClick={() => setIsProjectModalOpen(true)}
+                    >
+                        + New Project
+                    </button>
+                    <Link href="/superadmin/history" className="btn-ghost" style={{ textDecoration: "none", height: "36px", display: "inline-flex", alignItems: "center" }}>📜 Payment History</Link>
+                    <span className="role-badge role-super" style={{ height: "36px", display: "inline-flex", alignItems: "center" }}>⚡ Super Admin</span>
+                    <button className="btn-ghost" style={{ height: "36px", display: "inline-flex", alignItems: "center" }} onClick={handleLogout}>Sign Out</button>
                 </div>
             </header>
 
@@ -86,13 +59,19 @@ export default function SuperAdminDashboard() {
                         Good day, Admin 👋
                     </h1>
                     <p style={{ color: "var(--text-muted)", fontSize: "15px" }}>
-                        Full platform access · All projects visible
+                        Review approved requests and finalize payments below.
                     </p>
                 </div>
 
-
+                <PaymentRequestList role="SUPER_ADMIN" />
 
             </main>
+
+            <ProjectCreationModal
+                isOpen={isProjectModalOpen}
+                onClose={() => setIsProjectModalOpen(false)}
+                onProjectCreated={handleProjectCreated}
+            />
         </div>
     );
 }

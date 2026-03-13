@@ -20,5 +20,50 @@ model User {
   name       String?  @db.VarChar(100)
   created_at DateTime @default(now())
 
+  payment_requests PaymentRequest[]
+
   @@map("users")
+}
+
+model Project {
+  id          Int              @id @default(autoincrement())
+  name        String           @db.VarChar(100)
+  description String?          @db.Text
+  requests    PaymentRequest[]
+  created_at  DateTime         @default(now())
+
+  @@map("projects")
+}
+
+enum PaymentStatus {
+  PENDING_PM
+  PENDING_ADMIN
+  PAID
+  REJECTED
+}
+
+model PaymentRequest {
+  id           Int           @id @default(autoincrement())
+  status       PaymentStatus @default(PENDING_PM)
+  total_amount Decimal       @db.Decimal(10, 2)
+  supervisor   User          @relation(fields: [supervisor_id], references: [id])
+  supervisor_id Int
+  project      Project       @relation(fields: [project_id], references: [id])
+  project_id   Int
+  materials    Material[]
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
+
+  @@map("payment_requests")
+}
+
+model Material {
+  id         Int            @id @default(autoincrement())
+  name       String         @db.VarChar(100)
+  quantity   Int
+  unit_price Decimal        @db.Decimal(10, 2)
+  request    PaymentRequest @relation(fields: [request_id], references: [id])
+  request_id Int
+
+  @@map("materials")
 }
