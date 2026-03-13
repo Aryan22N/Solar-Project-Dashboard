@@ -20,7 +20,8 @@ model User {
   name       String?  @db.VarChar(100)
   created_at DateTime @default(now())
 
-  payment_requests PaymentRequest[]
+  payment_requests PaymentRequest[] @relation("SupervisorRequests")
+  approved_requests PaymentRequest[] @relation("PMApprovals")
 
   @@map("users")
 }
@@ -46,8 +47,10 @@ model PaymentRequest {
   id           Int           @id @default(autoincrement())
   status       PaymentStatus @default(PENDING_PM)
   total_amount Decimal       @db.Decimal(10, 2)
-  supervisor   User          @relation(fields: [supervisor_id], references: [id])
+  supervisor   User          @relation("SupervisorRequests", fields: [supervisor_id], references: [id])
   supervisor_id Int
+  pm           User?         @relation("PMApprovals", fields: [pm_id], references: [id])
+  pm_id        Int?
   project      Project       @relation(fields: [project_id], references: [id])
   project_id   Int
   materials    Material[]

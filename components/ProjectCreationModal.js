@@ -107,12 +107,18 @@ export default function ProjectCreationModal({ isOpen, onClose, onProjectCreated
                 }
                 .modal-content {
                     background: var(--bg-card);
-                    padding: 32px;
+                    padding: 24px;
                     border-radius: 20px;
                     width: 100%;
                     max-width: 450px;
-                    border: 1px solid var(--border-color);
+                    border: 1px solid var(--border);
                     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+                    backdrop-filter: blur(20px);
+                }
+                @media (min-width: 640px) {
+                    .modal-content {
+                        padding: 32px;
+                    }
                 }
             `}</style>
         </div>

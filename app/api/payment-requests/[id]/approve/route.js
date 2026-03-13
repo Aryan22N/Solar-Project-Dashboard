@@ -36,9 +36,14 @@ export async function PATCH(req, { params }) {
             return NextResponse.json({ error: "Unauthorized role" }, { status: 401 });
         }
 
+        const updateData = { status: nextStatus };
+        if (hasRole(user, "PROJECT_MANAGER")) {
+            updateData.pm_id = user.id;
+        }
+
         const updatedRequest = await prisma.paymentRequest.update({
             where: { id: requestId },
-            data: { status: nextStatus },
+            data: updateData,
             include: { project: true, materials: true }
         });
 

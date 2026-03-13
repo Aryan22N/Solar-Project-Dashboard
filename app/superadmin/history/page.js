@@ -7,6 +7,7 @@ import Link from "next/link";
 export default function PaymentHistory() {
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const router = useRouter();
 
     const fetchHistory = async () => {
@@ -35,15 +36,50 @@ export default function PaymentHistory() {
         <div style={{ minHeight: "100vh" }}>
             <div className="bg-mesh no-print" />
 
+            {/* Mobile Menu Overlay */}
+            <div className={`mobile-menu-overlay ${isMenuOpen ? "open" : ""}`}>
+                <button className="mobile-menu-close" onClick={() => setIsMenuOpen(false)}>✕</button>
+                <div style={{ marginBottom: "24px", textAlign: "center" }}>
+                    <div className="role-badge role-super" style={{ marginBottom: "12px" }}>⚡ Super Admin</div>
+                    <div style={{ color: "var(--text-muted)", fontSize: "14px" }}>Control Center</div>
+                </div>
+                
+                <Link href="/superadmin/dashboard" className="mobile-menu-link" onClick={() => setIsMenuOpen(false)}>
+                    <span>🏠</span> Dashboard
+                </Link>
+                
+                <button className="mobile-menu-link" style={{ width: "100%", background: "rgba(248, 113, 113, 0.05)", borderColor: "rgba(248, 113, 113, 0.2)", color: "var(--danger)" }} onClick={() => router.push("/login")}>
+                    <span>🚪</span> Sign Out
+                </button>
+            </div>
+
             <header className="page-header no-print">
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     <span style={{ fontSize: "22px" }}>☀️</span>
                     <span className="logo-text">Solar Portal</span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                
+                <div className="nav-desktop">
                     <Link href="/superadmin/dashboard" className="btn-ghost" style={{ textDecoration: "none" }}>← Back to Dashboard</Link>
                     <button className="btn-primary" onClick={handlePrint} style={{ width: "auto", padding: "8px 20px" }}>🖨️ Print Records</button>
                     <button className="btn-ghost" onClick={() => router.push("/login")}>Sign Out</button>
+                </div>
+
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                    <button 
+                        className="btn-primary mobile-only-btn" 
+                        style={{ padding: "6px 14px", fontSize: "12px", width: "auto", height: "36px" }} 
+                        onClick={handlePrint}
+                    >
+                        🖨️ Print
+                    </button>
+                    <button className="hamburger-btn" onClick={() => setIsMenuOpen(true)}>
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="3" y="5" width="14" height="2" rx="1" fill="currentColor"/>
+                            <rect x="3" y="9" width="14" height="2" rx="1" fill="currentColor"/>
+                            <rect x="3" y="13" width="14" height="2" rx="1" fill="currentColor"/>
+                        </svg>
+                    </button>
                 </div>
             </header>
 
@@ -63,7 +99,8 @@ export default function PaymentHistory() {
                             <tr style={{ borderBottom: "1px solid var(--border)", background: "rgba(255,255,255,0.02)" }}>
                                 <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Date</th>
                                 <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Project</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Supervisor</th>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Requested By</th>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Approver (PM)</th>
                                 <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Materials</th>
                                 <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Amount</th>
                                 <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
@@ -74,13 +111,14 @@ export default function PaymentHistory() {
                                 <tr key={req.id} style={{ borderBottom: "1px solid var(--border)" }}>
                                     <td style={{ padding: "16px 24px", fontSize: "14px" }}>{new Date(req.created_at).toLocaleDateString()}</td>
                                     <td style={{ padding: "16px 24px", fontSize: "14px", fontWeight: 600 }}>{req.project?.name}</td>
-                                    <td style={{ padding: "16px 24px", fontSize: "14px" }}>{req.supervisor?.name}</td>
+                                    <td style={{ padding: "16px 24px", fontSize: "14px" }}>{req.supervisor?.name || "Self"}</td>
+                                    <td style={{ padding: "16px 24px", fontSize: "14px" }}>{req.pm?.name || "Pending/N/A"}</td>
                                     <td style={{ padding: "16px 24px", fontSize: "13px", color: "var(--text-muted)" }}>
                                         {req.materials.map(m => `${m.name} (x${m.quantity})`).join(", ")}
                                     </td>
                                     <td style={{ padding: "16px 24px", fontSize: "15px", fontWeight: 700 }}>₹{parseFloat(req.total_amount).toLocaleString()}</td>
                                     <td style={{ padding: "16px 24px" }}>
-                                        <span className="role-badge" style={{ 
+                                        <span className="role-badge" style={{
                                             background: req.status === "PAID" ? "rgba(16,185,129,0.1)" : "rgba(255,255,255,0.05)",
                                             color: req.status === "PAID" ? "#10b981" : "var(--text-muted)",
                                             fontSize: "11px"

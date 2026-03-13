@@ -28,7 +28,12 @@ export async function GET() {
             });
         } else if (hasRole(user, "SUPER_ADMIN")) {
             requests = await prisma.paymentRequest.findMany({
-                include: { project: true, materials: true, supervisor: { select: { name: true } } },
+                include: { 
+                    project: true, 
+                    materials: true, 
+                    supervisor: { select: { name: true } },
+                    pm: { select: { name: true } }
+                },
                 orderBy: { created_at: "desc" }
             });
         }

@@ -60,9 +60,9 @@ export default function PaymentRequestList({ refreshTrigger, role }) {
             <h2 className="section-title">{role === "SUPERVISOR" ? "Recent Requests" : "Pending Approvals"}</h2>
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {requests.map((req) => (
-                    <div key={req.id} className="glass-card" style={{ padding: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ flex: 1 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                    <div key={req.id} className="glass-card" style={{ padding: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "20px" }}>
+                        <div style={{ flex: "1 1 300px", minWidth: "0" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px", flexWrap: "wrap" }}>
                                 <span style={{ fontWeight: 700, fontSize: "16px" }}>{req.project?.name}</span>
                                 <span className="role-badge" style={{ background: `${getStatusColor(req.status)}20`, color: getStatusColor(req.status), border: `1px solid ${getStatusColor(req.status)}30` }}>
                                     {req.status.replace("_", " ")}
@@ -80,16 +80,16 @@ export default function PaymentRequestList({ refreshTrigger, role }) {
                             </div>
                         </div>
 
-                        <div style={{ textAlign: "right" }}>
+                        <div style={{ textAlign: "right", flex: "1 1 100%", smFlex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
                             <div className="stat-value" style={{ fontSize: "20px", marginBottom: "12px" }}>
                                 ₹{parseFloat(req.total_amount).toLocaleString()}
                             </div>
-                            
-                            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+
+                            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
                                 {(role === "PROJECT_MANAGER" && req.status === "PENDING_PM") || (role === "SUPER_ADMIN" && req.status === "PENDING_ADMIN") ? (
                                     <>
-                                        <button className="btn-ghost" onClick={() => handleAction(req.id, "reject")} style={{ color: "var(--danger)" }}>Reject</button>
-                                        <button className="btn-primary" onClick={() => handleAction(req.id, "approve")} style={{ width: "auto", padding: "8px 20px" }}>Approve</button>
+                                        <button className="btn-ghost" onClick={() => handleAction(req.id, "reject")} style={{ color: "var(--danger)", flex: 1, whiteSpace: "nowrap" }}>Reject</button>
+                                        <button className="btn-primary" onClick={() => handleAction(req.id, "approve")} style={{ width: "auto", padding: "8px 20px", flex: 1, whiteSpace: "nowrap" }}>Approve</button>
                                     </>
                                 ) : null}
                             </div>
