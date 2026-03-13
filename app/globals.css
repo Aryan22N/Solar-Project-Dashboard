@@ -2,26 +2,26 @@
 
 /* ── Design Tokens ─────────────────────────────────────────── */
 :root {
-  --bg-deep: #08090d;
-  --bg-card: rgba(255, 255, 255, 0.04);
-  --bg-card-hover: rgba(255, 255, 255, 0.07);
-  --border: rgba(255, 255, 255, 0.08);
-  --border-glow: rgba(99, 179, 237, 0.35);
-  --text-primary: #f0f4ff;
-  --text-muted: #8892aa;
-  --accent: #3b82f6;
-  --accent-2: #818cf8;
-  --accent-glow: rgba(59, 130, 246, 0.25);
-  --danger: #f87171;
-  --success: #34d399;
-  --super-admin: #f59e0b;
-  --manager: #3b82f6;
-  --supervisor: #10b981;
+  --bg-deep: #f8fafc;
+  --bg-card: rgba(255, 255, 255, 0.7);
+  --bg-card-hover: rgba(255, 255, 255, 0.9);
+  --border: rgba(15, 23, 42, 0.08);
+  --border-glow: rgba(59, 130, 246, 0.3);
+  --text-primary: #0f172a;
+  --text-muted: #64748b;
+  --accent: #2563eb;
+  --accent-2: #4f46e5;
+  --accent-glow: rgba(37, 99, 235, 0.15);
+  --danger: #ef4444;
+  --success: #10b981;
+  --super-admin: #d97706;
+  --manager: #2563eb;
+  --supervisor: #059669;
 
   --radius-lg: 16px;
   --radius-xl: 24px;
-  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.15);
+  --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.1);
 }
 
 /* ── Global Reset ───────────────────────────────────────────── */
@@ -52,7 +52,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: #cbd5e1;
   border-radius: 3px;
 }
 
@@ -62,9 +62,9 @@ body {
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(59, 130, 246, 0.12) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(129, 140, 248, 0.10) 0%, transparent 60%),
-    var(--bg-deep);
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(59, 130, 246, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(129, 140, 248, 0.06) 0%, transparent 60%),
+    #f8fafc;
 }
 
 /* ── Glass card ─────────────────────────────────────────────── */
@@ -87,8 +87,8 @@ body {
 .input-field {
   width: 100%;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border);
+  background: #fff;
+  border: 1px solid #e2e8f0;
   border-radius: var(--radius-lg);
   color: var(--text-primary);
   font-size: 15px;
@@ -259,7 +259,7 @@ body {
   justify-content: space-between;
   padding: 20px 28px;
   border-bottom: 1px solid var(--border);
-  background: rgba(8, 9, 13, 0.8);
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(16px);
   position: sticky;
   top: 0;
@@ -316,8 +316,8 @@ body {
     width: 40px;
     height: 40px;
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border);
+    background: #fff;
+    border: 1px solid #e2e8f0;
     cursor: pointer;
     color: var(--text-primary);
     transition: background 0.2s;
@@ -342,7 +342,7 @@ body {
 .mobile-menu-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(8, 9, 13, 0.95);
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(20px);
   z-index: 100;
   display: flex;
@@ -507,5 +507,91 @@ body {
 @media (max-width: 640px) {
   .mobile-only-btn {
     display: flex !important;
+  }
+}
+
+/* ── Toast Notifications ───────────────────────────────────── */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.toast-item {
+  pointer-events: auto;
+  min-width: 300px;
+  max-width: 400px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: toastSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.toast-item.success {
+  border-left: 4px solid var(--success);
+}
+
+.toast-item.error {
+  border-left: 4px solid var(--danger);
+}
+
+.toast-icon {
+  font-size: 20px;
+}
+
+.toast-content {
+  flex: 1;
+}
+
+.toast-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.toast-message {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(100%) translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes toastFadeOut {
+  to {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .toast-container {
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+  }
+  .toast-item {
+    min-width: 0;
+    width: 100%;
   }
 }

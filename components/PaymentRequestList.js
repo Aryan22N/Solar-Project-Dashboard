@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Toast from "./Toast";
 
 export default function PaymentRequestList({ refreshTrigger, role }) {
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [toasts, setToasts] = useState([]);
+    const [lastActionTimes, setLastActionTimes] = useState({}); // { "id-action": timestamp }
 
     const fetchRequests = async () => {
         try {
@@ -22,16 +25,43 @@ export default function PaymentRequestList({ refreshTrigger, role }) {
         fetchRequests();
     }, [refreshTrigger]);
 
+    const addToast = (title, message, type = "success") => {
+        const id = Date.now();
+        setToasts(prev => [...prev, { id, title, message, type }]);
+        setTimeout(() => {
+            setToasts(prev => prev.filter(t => t.id !== id));
+        }, 4000);
+    };
+
     const handleAction = async (id, action) => {
+        const actionKey = `${id}-${action}`;
+        const now = Date.now();
+        const lastTime = lastActionTimes[actionKey] || 0;
+
+        // Cooldown check (35 seconds = 35000ms)
+        if (now - lastTime < 35000) {
+            console.log("Cooldown active for this action");
+            return;
+        }
+
         try {
             const res = await fetch(`/api/payment-requests/${id}/${action}`, {
                 method: "PATCH"
             });
             if (res.ok) {
+                setLastActionTimes(prev => ({ ...prev, [actionKey]: now }));
+                addToast(
+                    action === "approve" ? "Request Approved" : "Request Rejected",
+                    `The payment request for project has been ${action === "approve" ? "approved" : "rejected"}.`,
+                    action === "approve" ? "success" : "error"
+                );
                 fetchRequests();
+            } else {
+                addToast("Action Failed", "Something went wrong while processing the request.", "error");
             }
         } catch (err) {
             console.error(err);
+            addToast("Network Error", "Unable to connect to the server.", "error");
         }
     };
 
@@ -57,6 +87,7 @@ export default function PaymentRequestList({ refreshTrigger, role }) {
 
     return (
         <div className="fade-up-2">
+            <Toast toasts={toasts} />
             <h2 className="section-title">{role === "SUPERVISOR" ? "Recent Requests" : "Pending Approvals"}</h2>
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {requests.map((req) => (
@@ -73,7 +104,7 @@ export default function PaymentRequestList({ refreshTrigger, role }) {
                             </div>
                             <div style={{ marginTop: "12px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
                                 {req.materials.map((m, i) => (
-                                    <span key={i} style={{ fontSize: "11px", padding: "2px 8px", background: "rgba(255,255,255,0.05)", borderRadius: "4px" }}>
+                                    <span key={i} style={{ fontSize: "11px", padding: "4px 10px", background: "rgba(15, 23, 42, 0.04)", borderRadius: "6px", color: "var(--text-muted)", border: "1px solid rgba(15, 23, 42, 0.05)" }}>
                                         {m.name} (x{m.quantity})
                                     </span>
                                 ))}

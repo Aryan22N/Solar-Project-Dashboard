@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 export default function PaymentRequestForm({ onSuccess }) {
     const [projects, setProjects] = useState([]);
     const [selectedProject, setSelectedProject] = useState("");
-    const [materials, setMaterials] = useState([{ name: "", quantity: 1, unit_price: 0 }]);
+    const [materials, setMaterials] = useState([{ name: "", quantity: "", unit_price: "" }]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 

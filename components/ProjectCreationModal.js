@@ -97,7 +97,7 @@ export default function ProjectCreationModal({ isOpen, onClose, onProjectCreated
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: rgba(0, 0, 0, 0.4);
+                    background: rgba(15, 23, 42, 0.15);
                     backdrop-filter: blur(8px);
                     display: flex;
                     align-items: center;
@@ -106,13 +106,13 @@ export default function ProjectCreationModal({ isOpen, onClose, onProjectCreated
                     padding: 20px;
                 }
                 .modal-content {
-                    background: var(--bg-card);
+                    background: #fff;
                     padding: 24px;
                     border-radius: 20px;
                     width: 100%;
                     max-width: 450px;
-                    border: 1px solid var(--border);
-                    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+                    border: 1px solid rgba(15, 23, 42, 0.08);
+                    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.12);
                     backdrop-filter: blur(20px);
                 }
                 @media (min-width: 640px) {
