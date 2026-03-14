@@ -12,12 +12,12 @@ export async function PATCH(req, { params }) {
         const { id } = await params;
         const requestId = parseInt(id);
 
-        const updatedRequest = await prisma.paymentRequest.update({
+        await prisma.paymentRequest.update({
             where: { id: requestId },
             data: { status: "REJECTED" }
         });
 
-        return NextResponse.json(updatedRequest);
+        return NextResponse.json({ success: true, requestId, newStatus: "REJECTED" });
     } catch (error) {
         console.error("Reject request error:", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });

@@ -41,13 +41,13 @@ export async function PATCH(req, { params }) {
             updateData.pm_id = user.id;
         }
 
-        const updatedRequest = await prisma.paymentRequest.update({
+        // Only update and return minimal data - no need to include relations
+        await prisma.paymentRequest.update({
             where: { id: requestId },
-            data: updateData,
-            include: { project: true, materials: true }
+            data: updateData
         });
 
-        return NextResponse.json(updatedRequest);
+        return NextResponse.json({ success: true, requestId, newStatus: nextStatus });
     } catch (error) {
         console.error("Approve request error:", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });

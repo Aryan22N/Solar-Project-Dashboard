@@ -27,13 +27,26 @@ model User {
 }
 
 model Project {
-  id          Int              @id @default(autoincrement())
-  name        String           @db.VarChar(100)
-  description String?          @db.Text
-  requests    PaymentRequest[]
-  created_at  DateTime         @default(now())
+  id               Int               @id @default(autoincrement())
+  name             String            @db.VarChar(100)
+  description      String?           @db.Text
+  requests         PaymentRequest[]
+  progress_updates ProjectProgress[]
+  created_at       DateTime          @default(now())
 
   @@map("projects")
+}
+
+model ProjectProgress {
+  id         Int      @id @default(autoincrement())
+  percentage Int
+  date       String   @db.VarChar(100) // Manual date format
+  notes      String?  @db.Text
+  project    Project  @relation(fields: [project_id], references: [id])
+  project_id Int
+  created_at DateTime @default(now())
+
+  @@map("project_progress")
 }
 
 enum PaymentStatus {

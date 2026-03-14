@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -88,12 +89,12 @@ export default function LoginPage() {
                     50% { transform: translateY(-12px); }
                 }
                 .input-wrap:focus-within {
-                    box-shadow: 0 0 0 3px rgba(99,102,241,0.2) !important;
-                    border-color: #6366f1 !important;
+                    box-shadow: 0 0 0 3px var(--ring) !important;
+                    border-color: var(--primary) !important;
                 }
                 .sign-in-btn:not(:disabled):hover {
                     transform: translateY(-1px);
-                    box-shadow: 0 8px 28px rgba(99,102,241,0.45) !important;
+                    box-shadow: 0 8px 28px rgba(var(--primary), 0.45) !important;
                 }
                 .sign-in-btn:not(:disabled):active {
                     transform: translateY(0);
@@ -170,7 +171,6 @@ export default function LoginPage() {
             >
                 {/* Animated glow orbs */}
                 <motion.div
-                    style={styles.orb1}
                     animate={{ scale: [1, 1.2, 1], opacity: [0.6, 1, 0.6] }}
                     transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
                 />
@@ -196,16 +196,13 @@ export default function LoginPage() {
                     animate="show"
                 >
                     {/* Logo */}
-                    <motion.div style={styles.leftLogo} variants={fadeUp}>
-                        <motion.div
-                            style={styles.logoIcon}
-                            animate={{ rotate: [0, 10, -10, 0] }}
-                            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                        >
-                            ☀️
-                        </motion.div>
-                        <span style={styles.logoText}>SOLAR</span>
-                    </motion.div>
+                    <Image
+                        src="/Logo_1.png"
+                        alt="Solar Logo"
+                        width={240}
+                        height={220}
+                        style={{ borderRadius: '8px' }}
+                    />
 
                     {/* Hero text */}
                     <motion.div style={styles.heroBlock} className="responsive-hero-block" variants={stagger}>
@@ -418,8 +415,9 @@ const styles = {
         width: "400px",
         height: "400px",
         borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(99,102,241,0.28) 0%, transparent 70%)",
+        background: "radial-gradient(circle, var(--primary) 0%, transparent 70%)",
         pointerEvents: "none",
+        opacity: 0.15,
     },
     orb2: {
         position: "absolute",
@@ -428,8 +426,9 @@ const styles = {
         width: "320px",
         height: "320px",
         borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(16,185,129,0.2) 0%, transparent 70%)",
+        background: "radial-gradient(circle, var(--accent) 0%, transparent 70%)",
         pointerEvents: "none",
+        opacity: 0.15,
     },
     orb3: {
         position: "absolute",
@@ -598,17 +597,17 @@ const styles = {
     btn: {
         width: "100%",
         padding: "14px",
-        background: "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
-        color: "#fff",
+        background: "linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)",
+        color: "var(--primary-foreground)",
         border: "none",
-        borderRadius: "10px",
+        borderRadius: "var(--radius)",
         fontSize: "15px",
         fontWeight: 600,
         fontFamily: "inherit",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        boxShadow: "0 4px 16px rgba(99,102,241,0.35)",
+        boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
         transition: "box-shadow 0.2s, transform 0.15s",
         marginTop: "4px",
     },

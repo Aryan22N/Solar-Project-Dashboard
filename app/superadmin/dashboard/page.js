@@ -3,13 +3,39 @@
 import { useRouter } from "next/navigation";
 import PaymentRequestList from "@/components/PaymentRequestList";
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import ProjectCreationModal from "@/components/ProjectCreationModal";
+import ProjectProgress from "@/components/ProjectProgress";
+import { useEffect } from "react";
+import ShimmerLoader from "@/components/ShimmerLoader";
 
 export default function SuperAdminDashboard() {
     const router = useRouter();
     const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [projects, setProjects] = useState([]);
+    const [selectedProjectId, setSelectedProjectId] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        // Simulate initial loading for better UX
+        const timer = setTimeout(() => {
+            setIsLoading(false);
+        }, 800);
+        
+        return () => clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
+        fetch("/api/projects")
+            .then(res => res.json())
+            .then(data => {
+                setProjects(data);
+                if (data.length > 0) setSelectedProjectId(data[0].id);
+            })
+            .catch(err => console.error(err));
+    }, []);
 
     const handleLogout = async () => {
         await fetch("/api/logout", { method: "POST" });
@@ -22,8 +48,12 @@ export default function SuperAdminDashboard() {
     };
 
     return (
-        <div style={{ minHeight: "100vh" }}>
-            <div className="bg-mesh" />
+        <div style={{ minHeight: "100vh" }} className="responsive-root">
+
+
+            <div className="bg-mesh-custom" />
+            <div className="orb1" />
+            <div className="orb2" />
 
             {/* Mobile Menu Overlay */}
             <div className={`mobile-menu-overlay ${isMenuOpen ? "open" : ""}`}>
@@ -32,11 +62,11 @@ export default function SuperAdminDashboard() {
                     <div className="role-badge role-super" style={{ marginBottom: "12px" }}>⚡ Super Admin</div>
                     <div style={{ color: "var(--text-muted)", fontSize: "14px" }}>Control Center</div>
                 </div>
-                
+
                 <Link href="/superadmin/history" className="mobile-menu-link" onClick={() => setIsMenuOpen(false)}>
                     <span>📜</span> Payment History
                 </Link>
-                
+
                 <button className="mobile-menu-link" style={{ width: "100%", background: "rgba(248, 113, 113, 0.05)", borderColor: "rgba(248, 113, 113, 0.2)", color: "var(--danger)" }} onClick={handleLogout}>
                     <span>🚪</span> Sign Out
                 </button>
@@ -45,21 +75,27 @@ export default function SuperAdminDashboard() {
             {/* Header */}
             <header className="page-header">
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <span style={{ fontSize: "22px" }}>☀️</span>
-                    <span className="logo-text">Solar Portal</span>
+                    <Image
+                        src="/Logo_1.png"
+                        alt="Solar Logo"
+                        width={240}
+                        height={36}
+                        style={{ borderRadius: '8px' }}
+                    />
+
                 </div>
-                
+
                 <div className="nav-desktop">
-                    <button 
-                        className="btn-primary" 
-                        style={{ 
-                            padding: "8px 18px", 
-                            fontSize: "13px", 
-                            width: "auto", 
-                            display: "inline-flex", 
+                    <button
+                        className="btn-primary"
+                        style={{
+                            padding: "8px 18px",
+                            fontSize: "13px",
+                            width: "auto",
+                            display: "inline-flex",
                             alignItems: "center",
                             height: "36px"
-                        }} 
+                        }}
                         onClick={() => setIsProjectModalOpen(true)}
                     >
                         + New Project
@@ -70,30 +106,34 @@ export default function SuperAdminDashboard() {
                 </div>
 
                 <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                    <button 
-                        className="btn-primary mobile-only-btn" 
-                        style={{ 
-                            padding: "6px 14px", 
-                            fontSize: "12px", 
-                            width: "auto", 
+                    <button
+                        className="btn-primary mobile-only-btn"
+                        style={{
+                            padding: "6px 14px",
+                            fontSize: "12px",
+                            width: "auto",
                             height: "36px",
                             display: "none" // Hidden on desktop via CSS eventually, but helper for mobile
-                        }} 
+                        }}
                         onClick={() => setIsProjectModalOpen(true)}
                     >
                         + Project
                     </button>
                     <button className="hamburger-btn" onClick={() => setIsMenuOpen(true)}>
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="3" y="5" width="14" height="2" rx="1" fill="currentColor"/>
-                            <rect x="3" y="9" width="14" height="2" rx="1" fill="currentColor"/>
-                            <rect x="3" y="13" width="14" height="2" rx="1" fill="currentColor"/>
+                            <rect x="3" y="5" width="14" height="2" rx="1" fill="currentColor" />
+                            <rect x="3" y="9" width="14" height="2" rx="1" fill="currentColor" />
+                            <rect x="3" y="13" width="14" height="2" rx="1" fill="currentColor" />
                         </svg>
                     </button>
                 </div>
             </header>
 
             <main className="page-content">
+                {isLoading ? (
+                    <ShimmerLoader />
+                ) : (
+                    <>
 
                 {/* Welcome */}
                 <div className="fade-up" style={{ marginBottom: "36px" }}>
@@ -105,8 +145,30 @@ export default function SuperAdminDashboard() {
                     </p>
                 </div>
 
-                <PaymentRequestList role="SUPER_ADMIN" />
+                <PaymentRequestList 
+                    role="SUPER_ADMIN" 
+                    limit={3}
+                />
 
+                <div className="divider" style={{ margin: "48px 0" }} />
+
+                <div style={{ marginBottom: "24px" }}>
+                    <label className="stat-label">Project Progress Tracking</label>
+                    <select
+                        className="input-field"
+                        style={{ maxWidth: "300px", marginTop: "8px" }}
+                        value={selectedProjectId || ""}
+                        onChange={(e) => setSelectedProjectId(parseInt(e.target.value))}
+                    >
+                        {projects.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <ProjectProgress projectId={selectedProjectId} role="SUPER_ADMIN" />
+                    </>
+                )}
             </main>
 
             <ProjectCreationModal

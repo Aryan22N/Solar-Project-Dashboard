@@ -105,11 +105,11 @@ export default function PaymentRequestForm({ onSuccess }) {
             </div>
 
             <div style={{ marginBottom: "24px" }}>
-                <label className="stat-label">Materials</label>
+                <label className="stat-label">Expenses</label>
                 {materials.map((m, index) => (
                     <div key={index} style={{ display: "flex", gap: "12px", marginBottom: "12px", alignItems: "center" }}>
                         <input
-                            placeholder="Material Name"
+                            placeholder="Expense Name"
                             className="input-field"
                             style={{ flex: 3 }}
                             value={m.name}
