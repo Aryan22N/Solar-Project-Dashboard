@@ -112,8 +112,7 @@ export default function SuperAdminDashboard() {
                             padding: "6px 14px",
                             fontSize: "12px",
                             width: "auto",
-                            height: "36px",
-                            display: "none" // Hidden on desktop via CSS eventually, but helper for mobile
+                            height: "36px"
                         }}
                         onClick={() => setIsProjectModalOpen(true)}
                     >

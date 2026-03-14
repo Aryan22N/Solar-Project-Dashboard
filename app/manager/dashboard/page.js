@@ -12,6 +12,7 @@ export default function ManagerDashboard() {
     const [projects, setProjects] = useState([]);
     const [selectedProjectId, setSelectedProjectId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     useEffect(() => {
         // Simulate initial loading for better UX
@@ -45,6 +46,19 @@ export default function ManagerDashboard() {
             <div className="orb1" />
             <div className="orb2" />
 
+            {/* Mobile Menu Overlay */}
+            <div className={`mobile-menu-overlay ${isMenuOpen ? "open" : ""}`}>
+                <button className="mobile-menu-close" onClick={() => setIsMenuOpen(false)}>✕</button>
+                <div style={{ marginBottom: "24px", textAlign: "center" }}>
+                    <div className="role-badge role-manager" style={{ marginBottom: "12px" }}>📋 Project Manager</div>
+                    <div style={{ color: "var(--text-muted)", fontSize: "14px" }}>Review & Approve</div>
+                </div>
+                
+                <button className="mobile-menu-link" style={{ width: "100%", background: "rgba(248, 113, 113, 0.05)", borderColor: "rgba(248, 113, 113, 0.2)", color: "var(--danger)" }} onClick={handleLogout}>
+                    <span>🚪</span> Sign Out
+                </button>
+            </div>
+
             {/* Header */}
             <header className="page-header">
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -56,9 +70,18 @@ export default function ManagerDashboard() {
                         style={{ borderRadius: '8px' }}
                     />
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                <div className="nav-desktop">
                     <span className="role-badge role-manager">📋 Project Manager</span>
                     <button className="btn-ghost" onClick={handleLogout}>Sign Out</button>
+                </div>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                    <button className="hamburger-btn" onClick={() => setIsMenuOpen(true)}>
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="3" y="5" width="14" height="2" rx="1" fill="currentColor" />
+                            <rect x="3" y="9" width="14" height="2" rx="1" fill="currentColor" />
+                            <rect x="3" y="13" width="14" height="2" rx="1" fill="currentColor" />
+                        </svg>
+                    </button>
                 </div>
             </header>
 

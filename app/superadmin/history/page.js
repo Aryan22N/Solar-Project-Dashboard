@@ -138,7 +138,7 @@ export default function PaymentHistory() {
                                             src="/Logo_1.png"
                                             alt="Solar Logo"
                                             width={240}
-                                            height={220}
+                                            height={36}
                                             style={{ borderRadius: '8px' }}
                                         />
                 </div>
@@ -192,17 +192,18 @@ export default function PaymentHistory() {
                     </select>
                 </div>
 
-                <div className="glass-card printable-area" style={{ padding: "0", overflow: "hidden" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                <div className="table-responsive" style={{ overflowX: "auto", overflowY: "auto", maxWidth: "100%" }}>
+                    <div className="glass-card printable-area" style={{ padding: "0", minWidth: "1000px" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
                         <thead>
                             <tr style={{ borderBottom: "1px solid var(--border)", background: "rgba(255,255,255,0.02)" }}>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Date</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Project</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Requested By</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Approver (PM)</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Materials</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Amount</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase" }}>Status</th>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "12%" }}>Date</th>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "20%" }}>Project</th>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "15%" }}>Requested By</th>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "15%" }}>Approver (PM)</th>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "23%" }}>Materials</th>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "10%" }}>Amount</th>
+                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "10%" }}>Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -219,7 +220,7 @@ export default function PaymentHistory() {
                                     <td style={{ padding: "16px 24px", fontSize: "14px", fontWeight: 600 }}>{req.project?.name}</td>
                                     <td style={{ padding: "16px 24px", fontSize: "14px" }}>{req.supervisor?.name || "Self"}</td>
                                     <td style={{ padding: "16px 24px", fontSize: "14px" }}>{req.pm?.name || "Pending/N/A"}</td>
-                                    <td style={{ padding: "16px 24px", fontSize: "13px", color: "var(--text-muted)" }}>
+                                    <td style={{ padding: "16px 24px", fontSize: "13px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                                         {req.materials.map(m => `${m.name} (x${m.quantity})`).join(", ")}
                                     </td>
                                     <td style={{ padding: "16px 24px", fontSize: "15px", fontWeight: 700 }}>₹{parseFloat(req.total_amount).toLocaleString()}</td>
@@ -237,6 +238,7 @@ export default function PaymentHistory() {
                             )}
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </main>
 
