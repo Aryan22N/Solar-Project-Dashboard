@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req, { params }) {
     try {
         const user = await getUser();
-        if (!user || !hasRole(user, ["SUPER_ADMIN", "PROJECT_MANAGER"])) {
+        if (!user || !hasRole(user, ["SUPER_ADMIN", "PROJECT_MANAGER", "SUPERVISOR"])) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -16,6 +16,11 @@ export async function GET(req, { params }) {
         const project_id = parseInt(id);
         const updates = await prisma.projectProgress.findMany({
             where: { project_id },
+            include: {
+                user: {
+                    select: { name: true, role: true }
+                }
+            },
             orderBy: { created_at: "desc" }
         });
 
@@ -26,11 +31,11 @@ export async function GET(req, { params }) {
     }
 }
 
-// POST: Add a progress update (PM only)
+// POST: Add a progress update (PM and Supervisor)
 export async function POST(req, { params }) {
     try {
         const user = await getUser();
-        if (!user || !hasRole(user, "PROJECT_MANAGER")) {
+        if (!user || !hasRole(user, ["PROJECT_MANAGER", "SUPERVISOR"])) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -46,6 +51,7 @@ export async function POST(req, { params }) {
         const newUpdate = await prisma.projectProgress.create({
             data: {
                 project_id,
+                user_id: user.id,
                 percentage: percentage ? parseInt(percentage) : 0,
                 date,
                 notes

@@ -22,6 +22,7 @@ model User {
 
   payment_requests PaymentRequest[] @relation("SupervisorRequests")
   approved_requests PaymentRequest[] @relation("PMApprovals")
+  progress_updates ProjectProgress[]
 
   @@map("users")
 }
@@ -30,8 +31,10 @@ model Project {
   id               Int               @id @default(autoincrement())
   name             String            @db.VarChar(100)
   description      String?           @db.Text
+  status           String            @default("ACTIVE") @db.VarChar(20)
   requests         PaymentRequest[]
   progress_updates ProjectProgress[]
+  archived_updates ArchivedProgress[]
   created_at       DateTime          @default(now())
 
   @@map("projects")
@@ -44,9 +47,26 @@ model ProjectProgress {
   notes      String?  @db.Text
   project    Project  @relation(fields: [project_id], references: [id])
   project_id Int
+  user       User     @relation(fields: [user_id], references: [id])
+  user_id    Int
   created_at DateTime @default(now())
 
   @@map("project_progress")
+}
+
+model ArchivedProgress {
+  id         Int      @id @default(autoincrement())
+  percentage Int
+  date       String   @db.VarChar(100)
+  notes      String?  @db.Text
+  project    Project  @relation(fields: [project_id], references: [id])
+  project_id Int
+  user_name  String   @db.VarChar(100)
+  user_role  String   @db.VarChar(30)
+  original_created_at DateTime
+  archived_at DateTime @default(now())
+
+  @@map("archived_progress")
 }
 
 enum PaymentStatus {

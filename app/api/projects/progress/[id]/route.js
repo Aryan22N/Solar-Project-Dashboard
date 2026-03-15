@@ -4,11 +4,11 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-// PATCH: Update an existing progress update (PM only)
+// PATCH: Update an existing progress update (PM and Supervisor)
 export async function PATCH(req, { params }) {
     try {
         const user = await getUser();
-        if (!user || !hasRole(user, "PROJECT_MANAGER")) {
+        if (!user || !hasRole(user, ["PROJECT_MANAGER", "SUPERVISOR"])) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -33,11 +33,11 @@ export async function PATCH(req, { params }) {
     }
 }
 
-// DELETE: Delete an existing progress update (PM only)
+// DELETE: Delete an existing progress update (PM and Supervisor)
 export async function DELETE(req, { params }) {
     try {
         const user = await getUser();
-        if (!user || !hasRole(user, "PROJECT_MANAGER")) {
+        if (!user || !hasRole(user, ["PROJECT_MANAGER", "SUPERVISOR"])) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

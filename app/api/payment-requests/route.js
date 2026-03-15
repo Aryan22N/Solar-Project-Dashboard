@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { getUser, hasRole } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
+export const dynamic = "force-dynamic"; // Rebuild after cache clear
 
 // GET: Fetch requests based on role
 export async function GET() {

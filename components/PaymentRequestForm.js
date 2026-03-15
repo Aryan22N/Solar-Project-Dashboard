@@ -10,7 +10,7 @@ export default function PaymentRequestForm({ onSuccess }) {
     const [error, setError] = useState("");
 
     useEffect(() => {
-        fetch("/api/projects")
+        fetch("/api/projects?status=ACTIVE")
             .then(res => res.json())
             .then(data => setProjects(data))
             .catch(err => console.error("Error fetching projects:", err));

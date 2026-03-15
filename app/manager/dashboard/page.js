@@ -24,11 +24,11 @@ export default function ManagerDashboard() {
     }, []);
 
     useEffect(() => {
-        fetch("/api/projects")
+        fetch("/api/projects?status=ACTIVE")
             .then(res => res.json())
             .then(data => {
                 setProjects(data);
-                if (data.length > 0) setSelectedProjectId(data[0].id);
+                setSelectedProjectId("all");
             })
             .catch(err => console.error(err));
     }, []);
@@ -110,9 +110,10 @@ export default function ManagerDashboard() {
                     <select 
                         className="input-field" 
                         style={{ maxWidth: "300px", marginTop: "8px" }}
-                        value={selectedProjectId || ""}
-                        onChange={(e) => setSelectedProjectId(parseInt(e.target.value))}
+                        value={selectedProjectId || "all"}
+                        onChange={(e) => setSelectedProjectId(e.target.value === "all" ? "all" : parseInt(e.target.value))}
                     >
+                        <option value="all">All Projects</option>
                         {projects.map(p => (
                             <option key={p.id} value={p.id}>{p.name}</option>
                         ))}

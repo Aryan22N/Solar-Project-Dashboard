@@ -32,7 +32,7 @@ export default function SuperAdminDashboard() {
             .then(res => res.json())
             .then(data => {
                 setProjects(data);
-                if (data.length > 0) setSelectedProjectId(data[0].id);
+                setSelectedProjectId("all");
             })
             .catch(err => console.error(err));
     }, []);
@@ -151,18 +151,56 @@ export default function SuperAdminDashboard() {
 
                 <div className="divider" style={{ margin: "48px 0" }} />
 
-                <div style={{ marginBottom: "24px" }}>
-                    <label className="stat-label">Project Progress Tracking</label>
-                    <select
-                        className="input-field"
-                        style={{ maxWidth: "300px", marginTop: "8px" }}
-                        value={selectedProjectId || ""}
-                        onChange={(e) => setSelectedProjectId(parseInt(e.target.value))}
-                    >
-                        {projects.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                    </select>
+                <div style={{ marginBottom: "24px", display: "flex", alignItems: "flex-end", gap: "16px", flexWrap: "wrap" }}>
+                    <div style={{ flex: 1, minWidth: "200px" }}>
+                        <label className="stat-label">Project Progress Tracking</label>
+                        <select
+                            className="input-field"
+                            style={{ marginTop: "8px" }}
+                            value={selectedProjectId || "all"}
+                            onChange={(e) => setSelectedProjectId(e.target.value === "all" ? "all" : parseInt(e.target.value))}
+                        >
+                            <option value="all">All Projects</option>
+                            {projects.map(p => (
+                                <option key={p.id} value={p.id}>
+                                    {p.name} {p.status === "FINISHED" ? "(Finished)" : ""}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {selectedProjectId && selectedProjectId !== "all" && projects.find(p => p.id === selectedProjectId)?.status !== "FINISHED" && (
+                        <button 
+                            className="btn-primary"
+                            style={{ 
+                                height: "42px", 
+                                width: "auto", 
+                                padding: "0 24px", 
+                                background: "var(--success)", 
+                                borderColor: "var(--success)" 
+                            }}
+                            onClick={async () => {
+                                if (confirm("Are you sure you want to finish this project? All current notes will be archived and the project status will be set to FINISHED.")) {
+                                    try {
+                                        const res = await fetch(`/api/projects/${selectedProjectId}/finish`, { method: "POST" });
+                                        if (res.ok) {
+                                            alert("Project finished successfully!");
+                                            // Refresh projects list
+                                            const freshProjects = await fetch("/api/projects").then(r => r.json());
+                                            setProjects(freshProjects);
+                                        } else {
+                                            const data = await res.json();
+                                            alert(data.error || "Failed to finish project");
+                                        }
+                                    } catch (err) {
+                                        alert("An error occurred");
+                                    }
+                                }
+                            }}
+                        >
+                            ✓ Finish Project
+                        </button>
+                    )}
                 </div>
 
                 <ProjectProgress projectId={selectedProjectId} role="SUPER_ADMIN" />

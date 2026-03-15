@@ -40,7 +40,7 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
         if (role === "SUPER_ADMIN" || (showFilter && role === "SUPERVISOR")) {
             fetchProjects();
         }
-    }, [refreshTrigger]);
+    }, [refreshTrigger, role, showFilter]);
 
     const addToast = (title, message, type = "success") => {
         const id = Date.now();

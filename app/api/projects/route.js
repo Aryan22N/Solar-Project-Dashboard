@@ -4,14 +4,18 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req) {
     try {
         const user = await getUser();
         if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        const { searchParams } = new URL(req.url);
+        const status = searchParams.get("status");
+
         const projects = await prisma.project.findMany({
+            where: status ? { status } : {},
             orderBy: { name: "asc" }
         });
 

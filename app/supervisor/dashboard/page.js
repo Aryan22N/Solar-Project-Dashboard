@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import PaymentRequestForm from "@/components/PaymentRequestForm";
 import PaymentRequestList from "@/components/PaymentRequestList";
+import ProjectProgress from "@/components/ProjectProgress";
 import ShimmerLoader from "@/components/ShimmerLoader";
 
 export default function SupervisorDashboard() {
@@ -12,6 +13,8 @@ export default function SupervisorDashboard() {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [projects, setProjects] = useState([]);
+    const [selectedProjectId, setSelectedProjectId] = useState(null);
 
     useEffect(() => {
         // Simulate initial loading for better UX
@@ -20,6 +23,16 @@ export default function SupervisorDashboard() {
         }, 800);
         
         return () => clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
+        fetch("/api/projects?status=ACTIVE")
+            .then(res => res.json())
+            .then(data => {
+                setProjects(data);
+                setSelectedProjectId("all");
+            })
+            .catch(err => console.error(err));
     }, []);
 
     const handleLogout = async () => {
@@ -105,6 +118,26 @@ export default function SupervisorDashboard() {
                     limit={3}
                     showFilter={true}
                 />
+
+                <div className="divider" style={{ margin: "48px 0" }} />
+
+                <div className="fade-up" style={{ marginBottom: "24px" }}>
+                    <h2 style={{ fontSize: "24px", fontWeight: 700, marginBottom: "16px" }}>Project Progress & Notes</h2>
+                    <label className="stat-label">Select Project to View/Track Progress</label>
+                    <select 
+                        className="input-field" 
+                        style={{ maxWidth: "340px", marginTop: "8px" }}
+                        value={selectedProjectId || "all"}
+                        onChange={(e) => setSelectedProjectId(e.target.value === "all" ? "all" : parseInt(e.target.value))}
+                    >
+                        <option value="all">All Projects</option>
+                        {projects.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <ProjectProgress projectId={selectedProjectId} role="SUPERVISOR" />
                     </>
                 )}
             </main>
