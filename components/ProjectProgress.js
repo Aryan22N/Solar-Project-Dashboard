@@ -14,7 +14,8 @@ export default function ProjectProgress({ projectId, role }) {
 
     const canEdit = role === "PROJECT_MANAGER" || role === "SUPERVISOR";
 
-    const fetchUpdates = async () => {
+    const fetchUpdates = async (showLoading = true) => {
+        if (showLoading) setLoading(true);
         try {
             const url = projectId && projectId !== "all" 
                 ? `/api/projects/${projectId}/progress`
@@ -54,7 +55,7 @@ export default function ProjectProgress({ projectId, role }) {
             return;
         }
 
-        if (!projectId || projectId === "all") {
+        if (!editingId && (!projectId || projectId === "all")) {
             setError("Please select a specific project to add progress for");
             return;
         }
@@ -80,7 +81,7 @@ export default function ProjectProgress({ projectId, role }) {
                 setDate("");
                 setNotes("");
                 setEditingId(null);
-                fetchUpdates();
+                fetchUpdates(false);
             } else {
                 const data = await res.json();
                 setError(data.error || "Failed to save update");
@@ -97,7 +98,7 @@ export default function ProjectProgress({ projectId, role }) {
         setPercentage(update.percentage);
         setDate(update.date);
         setNotes(update.notes || "");
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        document.getElementById("progress-form")?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
 
     const cancelEdit = () => {
@@ -117,7 +118,7 @@ export default function ProjectProgress({ projectId, role }) {
             });
             
             if (res.ok) {
-                fetchUpdates();
+                fetchUpdates(false);
             } else {
                 setError("Failed to delete update");
             }
@@ -231,7 +232,7 @@ export default function ProjectProgress({ projectId, role }) {
                                     )}
                                 </div>
                                 {update.notes && (
-                                    <p style={{ fontSize: "14px", color: "var(--foreground)", opacity: 0.8, lineHeight: 1.5 }}>
+                                    <p style={{ fontSize: "14px", color: "var(--foreground)", opacity: 0.8, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
                                         {update.notes}
                                     </p>
                                 )}
