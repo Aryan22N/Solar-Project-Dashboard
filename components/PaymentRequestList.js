@@ -24,7 +24,8 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
         } catch (err) {
             console.error(err);
         } finally {
-            setLoading(false);
+            // Add a small delay so the user can actually see the beautiful shimmer effect
+            setTimeout(() => setLoading(false), 800);
         }
     };
 
@@ -183,7 +184,35 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
     // Apply limit for display (if not showing all)
     const displayedRequests = !showAll && limit ? filteredRequests.slice(0, limit) : filteredRequests;
 
-    if (loading) return <div className="spinner" style={{ margin: "20px auto", display: "block" }}></div>;
+    if (loading) {
+        return (
+            <div className="fade-up-2">
+                <style>{`
+                    @keyframes premium-shimmer-anim {
+                        0% { background-position: -1000px 0; }
+                        100% { background-position: 1000px 0; }
+                    }
+                    .premium-shimmer {
+                        background: #f1f5f9;
+                        background-image: linear-gradient(
+                            to right,
+                            #f1f5f9 0%,
+                            #e2e8f0 20%,
+                            #f1f5f9 40%,
+                            #f1f5f9 100%
+                        );
+                        background-repeat: no-repeat;
+                        background-size: 1000px 100%;
+                        display: block;
+                        position: relative;
+                        animation: premium-shimmer-anim 2s linear infinite;
+                    }
+                `}</style>
+                <h2 className="section-title">{role === "SUPERVISOR" ? "Recent Requests" : "Pending Approvals"}</h2>
+                <div className="premium-shimmer" style={{ height: "400px", width: "100%", borderRadius: "20px", border: "1px solid #e2e8f0" }}></div>
+            </div>
+        );
+    }
 
     return (
         <div className="fade-up-2">

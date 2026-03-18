@@ -19,22 +19,17 @@ export default function SuperAdminDashboard() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Simulate initial loading for better UX
-        const timer = setTimeout(() => {
-            setIsLoading(false);
-        }, 800);
-
-        return () => clearTimeout(timer);
-    }, []);
-
-    useEffect(() => {
+        setIsLoading(true);
         fetch("/api/projects")
             .then(res => res.json())
             .then(data => {
                 setProjects(data);
                 setSelectedProjectId("all");
             })
-            .catch(err => console.error(err));
+            .catch(err => console.error(err))
+            .finally(() => {
+                setTimeout(() => setIsLoading(false), 600);
+            });
     }, []);
 
     const handleLogout = async () => {

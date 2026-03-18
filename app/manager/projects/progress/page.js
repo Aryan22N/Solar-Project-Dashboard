@@ -15,15 +15,14 @@ export default function ManagerProjectProgressPage() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 800);
-        return () => clearTimeout(timer);
-    }, []);
-
-    useEffect(() => {
+        setIsLoading(true);
         fetch("/api/projects?status=ACTIVE")
             .then(res => res.json())
             .then(data => setProjects(data))
-            .catch(err => console.error(err));
+            .catch(err => console.error(err))
+            .finally(() => {
+                setTimeout(() => setIsLoading(false), 600);
+            });
     }, []);
 
     const handleLogout = async () => {

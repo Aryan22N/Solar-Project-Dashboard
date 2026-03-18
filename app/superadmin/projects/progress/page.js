@@ -15,15 +15,20 @@ export default function ProjectManagementPage() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 800);
-        return () => clearTimeout(timer);
-    }, []);
-
-    useEffect(() => {
+        setIsLoading(true);
         fetch("/api/projects")
             .then(res => res.json())
             .then(data => setProjects(data))
-            .catch(err => console.error(err));
+            .catch(err => console.error(err))
+    }, []);
+
+    useEffect(() => {
+        // Since Supervisor dashboard doesn't fetch main data here (it's in PaymentRequestForm),
+        // we keep a small aesthetic timer but ensure success callback handles it
+        const timer = setTimeout(() => {
+            setIsLoading(false);
+        }, 800);
+        return () => clearTimeout(timer);
     }, []);
 
     const handleLogout = async () => {

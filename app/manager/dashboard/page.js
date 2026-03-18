@@ -16,22 +16,18 @@ export default function ManagerDashboard() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     useEffect(() => {
-        // Simulate initial loading for better UX
-        const timer = setTimeout(() => {
-            setIsLoading(false);
-        }, 800);
-        
-        return () => clearTimeout(timer);
-    }, []);
-
-    useEffect(() => {
+        setIsLoading(true);
         fetch("/api/projects?status=ACTIVE")
             .then(res => res.json())
             .then(data => {
                 setProjects(data);
                 setSelectedProjectId("all");
             })
-            .catch(err => console.error(err));
+            .catch(err => console.error(err))
+            .finally(() => {
+                // Keep shimmer for a tiny bit longer for smooth transition
+                setTimeout(() => setIsLoading(false), 600);
+            });
     }, []);
 
     const handleLogout = async () => {
