@@ -12,6 +12,9 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
     const [selectedProjectId, setSelectedProjectId] = useState(null);
     const [actionInProgress, setActionInProgress] = useState(null); // Track which request is being processed
     const [showAll, setShowAll] = useState(false); // For "View More" functionality
+    const [expandedNotes, setExpandedNotes] = useState({}); // { requestId: boolean }
+    const [pmNotes, setPmNotes] = useState({}); // { requestId: string }
+    const [savingNote, setSavingNote] = useState({}); // { requestId: boolean }
 
     const fetchRequests = async () => {
         try {
@@ -50,43 +53,59 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
         }, 4000);
     };
 
-    const handleAction = async (id, action) => {
+    const handleAction = async (id, action, isClubbed = false, requestIds = [], projectId = null, currentPct = 0) => {
+        // id is used for the key (e.g., 'group-1-date' for clubbed)
         const actionKey = `${id}-${action}`;
         const now = Date.now();
         const lastTime = lastActionTimes[actionKey] || 0;
 
-        // Cooldown check (5 seconds = 5000ms) - reduced from 35s
+        // Cooldown check (5 seconds = 5000ms)
         if (now - lastTime < 5000) {
             console.log("Cooldown active for this action");
             addToast("Please Wait", "Please wait a moment before trying again.", "error");
             return;
         }
 
-        // Prevent multiple actions on same request
+        // Prevent multiple actions on same request/group
         if (actionInProgress === id) {
             return;
+        }
+
+        // Auto-save note if present
+        if (pmNotes[id]) {
+            const success = await handleSavePMNote(id, projectId, currentPct, true);
+            if (!success) {
+                addToast("Note Failed", "Failed to save the note before approval. Action cancelled.", "error");
+                return;
+            }
         }
 
         setActionInProgress(id);
 
         try {
-            const res = await fetch(`/api/payment-requests/${id}/${action}`, {
+            // If clubbed, join IDs into a comma-separated string for the bulk-enabled APIs
+            const targetId = isClubbed && requestIds.length > 0 ? requestIds.join(",") : id;
+            const res = await fetch(`/api/payment-requests/${targetId}/${action}`, {
                 method: "PATCH"
             });
             
             if (res.ok) {
                 setLastActionTimes(prev => ({ ...prev, [actionKey]: now }));
                 
-                // Optimistic update - remove/update the request in the list immediately
-                setRequests(prev => prev.filter(req => req.id !== id));
+                // Optimistic update
+                setRequests(prev => prev.filter(req => {
+                    // Check both ID types for clubbed vs single
+                    const groupKey = req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id;
+                    return groupKey !== id;
+                }));
                 
                 addToast(
                     action === "approve" ? "Request Approved ✓" : "Request Rejected ✗",
-                    `The payment request has been ${action === "approve" ? "approved" : "rejected"}.`,
+                    `The payment request ${isClubbed ? "group" : ""} has been ${action === "approve" ? "approved" : "rejected"}.`,
                     action === "approve" ? "success" : "error"
                 );
                 
-                // Refresh list in background (debounced)
+                // Refresh list in background
                 setTimeout(() => fetchRequests(), 1000);
             } else {
                 addToast("Action Failed", "Something went wrong while processing the request.", "error");
@@ -106,6 +125,54 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
             case "PAID": return "#10b981";
             case "REJECTED": return "#f87171";
             default: return "var(--text-muted)";
+        }
+    };
+
+    const getProgressColor = (pct) => {
+        if (pct >= 75) return "#10b981";
+        if (pct >= 50) return "#3b82f6";
+        if (pct >= 25) return "#f59e0b";
+        return "#ef4444";
+    };
+
+    const toggleNotes = (id) => {
+        setExpandedNotes(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
+    const handleSavePMNote = async (requestId, projectId, currentPct, silent = false) => {
+        const note = pmNotes[requestId];
+        if (!note || !note.trim()) return true;
+
+        if (!silent) setSavingNote(prev => ({ ...prev, [requestId]: true }));
+        try {
+            const today = new Date();
+            const dateStr = today.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+
+            const res = await fetch(`/api/projects/${projectId}/progress`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    percentage: currentPct,
+                    date: dateStr,
+                    notes: `[${role === "SUPER_ADMIN" ? "Admin" : "Manager"} Note] ${note}`
+                })
+            });
+
+            if (res.ok) {
+                if (!silent) addToast("Note Saved", "Your note has been added to the project progress.", "success");
+                setPmNotes(prev => ({ ...prev, [requestId]: "" }));
+                if (!silent) fetchRequests();
+                return true;
+            } else {
+                if (!silent) addToast("Error", "Failed to save note.", "error");
+                return false;
+            }
+        } catch (err) {
+            console.error("Error saving PM note:", err);
+            if (!silent) addToast("Error", "An unexpected error occurred.", "error");
+            return false;
+        } finally {
+            if (!silent) setSavingNote(prev => ({ ...prev, [requestId]: false }));
         }
     };
 
@@ -149,16 +216,21 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
             ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                     {displayedRequests.map((req) => (
-                    <div key={req.id} className="glass-card" style={{ padding: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "20px" }}>
+                    <div key={req.isClubbed ? `${req.project_id}-${req.created_at}-${req.status}` : req.id} className="glass-card" style={{ padding: "24px", paddingTop: req.isClubbed ? "12px" : "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "20px", borderLeft: req.isClubbed ? "4px solid var(--primary)" : "none" }}>
                         <div style={{ flex: "1 1 300px", minWidth: "0" }}>
+                            {req.isClubbed && (
+                                <div style={{ fontSize: "10px", fontWeight: 700, textTransform: "uppercase", color: "var(--primary)", letterSpacing: "0.5px", marginBottom: "8px" }}>
+                                    📅 Day Summary • Grouped by Date
+                                </div>
+                            )}
                             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px", flexWrap: "wrap" }}>
                                 <span style={{ fontWeight: 700, fontSize: "16px" }}>{req.project?.name}</span>
                                 <span className="role-badge" style={{ background: `${getStatusColor(req.status)}20`, color: getStatusColor(req.status), border: `1px solid ${getStatusColor(req.status)}30` }}>
-                                    {req.status.replace("_", " ")}
+                                    {req.isClubbed ? `${req.status.replace("_", " ")} (ALL)` : req.status.replace("_", " ")}
                                 </span>
                             </div>
                             <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-                                Requested by: {req.supervisor?.name || "Self"} • {new Date(req.created_at).toLocaleDateString()}
+                                {req.isClubbed ? "Requested by: " : "Requested by: "}{req.supervisor?.name || "Self"} • {new Date(req.created_at).toLocaleDateString()}
                                 {req.status === "REJECTED" && req.pm?.name && (
                                     <div style={{ marginTop: "4px", color: "#f87171", fontSize: "12px", fontWeight: 500 }}>
                                         ❌ Rejected by: {req.pm.name}
@@ -177,6 +249,72 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
                                     </span>
                                 ))}
                             </div>
+
+                            {/* Progress Section for PM & Super Admin */}
+                            {(role === "PROJECT_MANAGER" || role === "SUPER_ADMIN") && req.progress && (
+                                <div style={{ marginTop: "20px", padding: "12px", background: "rgba(59,130,246,0.03)", borderRadius: "10px", border: "1px solid rgba(59,130,246,0.08)" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                                        <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-muted)" }}>Project Progress</span>
+                                        <span style={{ fontSize: "12px", fontWeight: 700, color: getProgressColor(req.progress.percentage) }}>{req.progress.percentage}%</span>
+                                    </div>
+                                    <div style={{ width: "100%", height: "6px", background: "rgba(0,0,0,0.05)", borderRadius: "3px", overflow: "hidden", marginBottom: "10px" }}>
+                                        <div style={{ width: `${req.progress.percentage}%`, height: "100%", background: getProgressColor(req.progress.percentage), transition: "width 0.5s ease" }} />
+                                    </div>
+                                    
+                                    {req.progress.notes && req.progress.notes.length > 0 && (
+                                        <>
+                                            <button 
+                                                onClick={() => toggleNotes(req.id)}
+                                                style={{ background: "none", border: "none", color: "var(--primary)", fontSize: "12px", fontWeight: 600, cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: "4px" }}
+                                            >
+                                                {expandedNotes[req.id] ? "▼ Hide Notes" : "▶ View Day Notes"}
+                                            </button>
+                                            
+                                            {expandedNotes[req.id] && (
+                                            <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                                                    {req.progress.notes.map((note, idx) => (
+                                                        <div key={idx} style={{ padding: "8px", background: "#fff", borderRadius: "6px", border: "1px solid rgba(0,0,0,0.05)", fontSize: "12px" }}>
+                                                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                                                                <span style={{ fontWeight: 600, color: "var(--primary)" }}>{note.date}</span>
+                                                                <span style={{ color: "var(--text-muted)", fontSize: "10px" }}>{note.percentage}%</span>
+                                                            </div>
+                                                            <div style={{ color: "#475569", fontStyle: "italic", marginBottom: "4px" }}>"{note.notes || "No notes provided"}"</div>
+                                                            <div style={{ fontSize: "10px", textAlign: "right", color: "var(--text-muted)", fontWeight: 600 }}>
+                                                                — {note.user?.name} <span style={{ opacity: 0.6 }}>({note.user?.role?.replace("_", " ")})</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+
+                                    {/* Manager/Admin Note Input */}
+                                    <div style={{ marginTop: "16px", borderTop: "1px solid rgba(0,0,0,0.05)", paddingTop: "12px" }}>
+                                        <textarea 
+                                            placeholder={`Add a ${role === "SUPER_ADMIN" ? "super admin" : "manager"} note for this project...`}
+                                            className="input-field"
+                                            value={pmNotes[req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id] || ""}
+                                            onChange={(e) => {
+                                                const key = req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id;
+                                                setPmNotes(prev => ({ ...prev, [key]: e.target.value }));
+                                            }}
+                                            style={{ minHeight: "60px", fontSize: "12px", background: "#fff", marginBottom: "8px" }}
+                                        />
+                                        <button 
+                                            className="btn-ghost"
+                                            onClick={() => {
+                                                const key = req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id;
+                                                handleSavePMNote(key, req.project_id, req.progress.percentage);
+                                            }}
+                                            disabled={savingNote[req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id] || !pmNotes[req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id]?.trim()}
+                                            style={{ padding: "6px 12px", fontSize: "11px", display: "flex", alignItems: "center", gap: "6px", width: "auto" }}
+                                        >
+                                            {savingNote[req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id] ? "Saving..." : `💾 Save ${role === "SUPER_ADMIN" ? "Admin" : "Manager"} Note`}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div style={{ textAlign: "right", flex: "1 1 100%", smFlex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
@@ -189,13 +327,16 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
                                     <>
                                         <button 
                                             className="btn-ghost" 
-                                            onClick={() => handleAction(req.id, "reject")} 
+                                            onClick={() => {
+                                                const groupId = req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id;
+                                                handleAction(groupId, "reject", req.isClubbed, req.requestIds, req.project_id, req.progress.percentage);
+                                            }} 
                                             style={{ 
                                                 color: "#64748b", 
                                                 flex: 1, 
                                                 whiteSpace: "nowrap",
-                                                opacity: actionInProgress === req.id ? 0.5 : 1,
-                                                cursor: actionInProgress === req.id ? 'not-allowed' : 'pointer',
+                                                opacity: actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id) ? 0.5 : 1,
+                                                cursor: actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id) ? 'not-allowed' : 'pointer',
                                                 border: '1px solid var(--border)'
                                             }}
                                             onMouseEnter={(e) => {
@@ -208,24 +349,27 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
                                                 e.target.style.borderColor = 'var(--border)';
                                                 e.target.style.color = '#64748b';
                                             }}
-                                            disabled={actionInProgress === req.id}
+                                            disabled={actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id)}
                                         >
-                                            {actionInProgress === req.id ? "Processing..." : "Reject"}
+                                            {actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id) ? "Processing..." : req.isClubbed ? "Reject All" : "Reject"}
                                         </button>
                                         <button 
                                             className="btn-primary" 
-                                            onClick={() => handleAction(req.id, "approve")} 
+                                            onClick={() => {
+                                                const groupId = req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id;
+                                                handleAction(groupId, "approve", req.isClubbed, req.requestIds, req.project_id, req.progress.percentage);
+                                            }} 
                                             style={{ 
                                                 width: "auto", 
                                                 padding: "8px 20px", 
                                                 flex: 1, 
                                                 whiteSpace: "nowrap",
-                                                opacity: actionInProgress === req.id ? 0.5 : 1,
-                                                cursor: actionInProgress === req.id ? 'not-allowed' : 'pointer'
+                                                opacity: actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id) ? 0.5 : 1,
+                                                cursor: actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id) ? 'not-allowed' : 'pointer'
                                             }}
-                                            disabled={actionInProgress === req.id}
+                                            disabled={actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id)}
                                         >
-                                            {actionInProgress === req.id ? "Processing..." : "Approve"}
+                                            {actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id) ? "Processing..." : req.isClubbed ? "Approve All" : "Approve"}
                                         </button>
                                     </>
                                 ) : null}

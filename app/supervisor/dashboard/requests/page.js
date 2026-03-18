@@ -1,37 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import PaymentRequestList from "@/components/PaymentRequestList";
-import ProjectProgress from "@/components/ProjectProgress";
 import ShimmerLoader from "@/components/ShimmerLoader";
 
-export default function ManagerDashboard() {
+export default function SupervisorRequests() {
     const router = useRouter();
-    const [projects, setProjects] = useState([]);
-    const [selectedProjectId, setSelectedProjectId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     useEffect(() => {
-        // Simulate initial loading for better UX
         const timer = setTimeout(() => {
             setIsLoading(false);
         }, 800);
-        
         return () => clearTimeout(timer);
-    }, []);
-
-    useEffect(() => {
-        fetch("/api/projects?status=ACTIVE")
-            .then(res => res.json())
-            .then(data => {
-                setProjects(data);
-                setSelectedProjectId("all");
-            })
-            .catch(err => console.error(err));
     }, []);
 
     const handleLogout = async () => {
@@ -42,7 +26,6 @@ export default function ManagerDashboard() {
     return (
         <div style={{ minHeight: "100vh" }} className="responsive-root">
 
-
             <div className="bg-mesh-custom" />
             <div className="orb1" />
             <div className="orb2" />
@@ -51,13 +34,9 @@ export default function ManagerDashboard() {
             <div className={`mobile-menu-overlay ${isMenuOpen ? "open" : ""}`}>
                 <button className="mobile-menu-close" onClick={() => setIsMenuOpen(false)}>✕</button>
                 <div style={{ marginBottom: "24px", textAlign: "center" }}>
-                    <div className="role-badge role-manager" style={{ marginBottom: "12px" }}>📋 Project Manager</div>
-                    <div style={{ color: "var(--text-muted)", fontSize: "14px" }}>Review & Approve</div>
+                    <div className="role-badge role-supervisor" style={{ marginBottom: "12px" }}>🛠️ Supervisor</div>
+                    <div style={{ color: "var(--text-muted)", fontSize: "14px" }}>Field Operations</div>
                 </div>
-                
-                <Link href="/manager/projects/progress" className="mobile-menu-link" onClick={() => setIsMenuOpen(false)}>
-                    <span>📈</span> Project Progress
-                </Link>
                 
                 <button className="mobile-menu-link" style={{ width: "100%", background: "rgba(248, 113, 113, 0.05)", borderColor: "rgba(248, 113, 113, 0.2)", color: "var(--danger)" }} onClick={handleLogout}>
                     <span>🚪</span> Sign Out
@@ -76,8 +55,7 @@ export default function ManagerDashboard() {
                     />
                 </div>
                 <div className="nav-desktop">
-                    <Link href="/manager/projects/progress" className="btn-ghost" style={{ textDecoration: "none", height: "36px", display: "inline-flex", alignItems: "center" }}>📈 Project Progress</Link>
-                    <span className="role-badge role-manager">📋 Project Manager</span>
+                    <span className="role-badge role-supervisor">🛠️ Supervisor</span>
                     <button className="btn-ghost" onClick={handleLogout}>Sign Out</button>
                 </div>
                 <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
@@ -96,26 +74,21 @@ export default function ManagerDashboard() {
                     <ShimmerLoader />
                 ) : (
                     <>
-                        {/* Welcome */}
-                        <div className="fade-up" style={{ marginBottom: "36px" }}>
-                            <h1 style={{ fontSize: "30px", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "8px" }}>
-                                Welcome back, Manager 👋
-                            </h1>
-                            <p style={{ color: "var(--text-muted)", fontSize: "15px" }}>
-                                Review and approve supervisor payment requests from the list below.
-                            </p>
+                        {/* Back Button */}
+                        <div className="fade-up" style={{ marginBottom: "24px" }}>
+                            <button 
+                                className="btn-ghost" 
+                                onClick={() => router.push("/supervisor/dashboard")}
+                                style={{ padding: "8px 16px", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}
+                            >
+                                ← Back to Dashboard
+                            </button>
                         </div>
 
-                        <button 
-                            className="btn-primary fade-up" 
-                            style={{ width: "auto", padding: "10px 32px", marginBottom: "24px" }} 
-                            onClick={() => router.push("/manager/projects/progress")}
-                        >
-                            📈 Open Progress Tracker
-                        </button>
-
-                        <PaymentRequestList role="PROJECT_MANAGER" />
-
+                        <PaymentRequestList 
+                            role="SUPERVISOR" 
+                            showFilter={true}
+                        />
                     </>
                 )}
             </main>

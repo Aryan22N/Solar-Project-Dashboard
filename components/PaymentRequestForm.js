@@ -8,6 +8,14 @@ export default function PaymentRequestForm({ onSuccess }) {
     const [materials, setMaterials] = useState([{ name: "", quantity: "", unit_price: "" }]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [expenseHeads, setExpenseHeads] = useState([]);
+
+    // Progress & Notes state
+    const [currentProgress, setCurrentProgress] = useState(0);
+    const [progressNote, setProgressNote] = useState("");
+    const [progressPercentage, setProgressPercentage] = useState("");
+    const [savingProgress, setSavingProgress] = useState(false);
+    const [progressSaved, setProgressSaved] = useState(false);
 
     useEffect(() => {
         fetch("/api/projects?status=ACTIVE")
@@ -15,6 +23,40 @@ export default function PaymentRequestForm({ onSuccess }) {
             .then(data => setProjects(data))
             .catch(err => console.error("Error fetching projects:", err));
     }, []);
+
+    // When project changes, update expense heads and fetch progress
+    useEffect(() => {
+        if (selectedProject) {
+            const project = projects.find(p => p.id === parseInt(selectedProject));
+            if (project && project.expense_heads && project.expense_heads.length > 0) {
+                setExpenseHeads(project.expense_heads);
+            } else {
+                setExpenseHeads([]);
+            }
+            setMaterials([{ name: "", quantity: "", unit_price: "" }]);
+
+            // Fetch latest progress for this project
+            fetch(`/api/projects/${selectedProject}/progress`)
+                .then(res => res.json())
+                .then(data => {
+                    if (Array.isArray(data) && data.length > 0) {
+                        setCurrentProgress(data[0].percentage || 0);
+                    } else {
+                        setCurrentProgress(0);
+                    }
+                })
+                .catch(() => setCurrentProgress(0));
+
+            setProgressNote("");
+            setProgressPercentage("");
+            setProgressSaved(false);
+        } else {
+            setExpenseHeads([]);
+            setCurrentProgress(0);
+            setProgressNote("");
+            setProgressPercentage("");
+        }
+    }, [selectedProject, projects]);
 
     const addMaterial = () => {
         setMaterials([...materials, { name: "", quantity: 1, unit_price: 0 }]);
@@ -58,7 +100,28 @@ export default function PaymentRequestForm({ onSuccess }) {
             });
 
             if (response.ok) {
+                // Auto-save progress & note if provided
+                if (progressNote.trim() || progressPercentage) {
+                    try {
+                        const today = new Date();
+                        const dateStr = today.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+                        await fetch(`/api/projects/${selectedProject}/progress`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                percentage: progressPercentage || currentProgress,
+                                date: dateStr,
+                                notes: progressNote
+                            })
+                        });
+                    } catch (err) {
+                        console.error("Error saving progress:", err);
+                    }
+                }
+
                 setMaterials([{ name: "", quantity: 1, unit_price: 0 }]);
+                setProgressNote("");
+                setProgressPercentage("");
                 setSelectedProject("");
                 onSuccess();
             } else {
@@ -70,6 +133,13 @@ export default function PaymentRequestForm({ onSuccess }) {
         } finally {
             setLoading(false);
         }
+    };
+
+    const getProgressColor = (pct) => {
+        if (pct >= 75) return "#10b981";
+        if (pct >= 50) return "#3b82f6";
+        if (pct >= 25) return "#f59e0b";
+        return "#ef4444";
     };
 
     return (
@@ -88,8 +158,8 @@ export default function PaymentRequestForm({ onSuccess }) {
                     style={{
                         appearance: "none",
                         cursor: "pointer",
-                        color: "#000",          // text color
-                        backgroundColor: "#fff" // optional for better visibility
+                        color: "#000",
+                        backgroundColor: "#fff"
                     }}
                 >
                     <option value="" style={{ color: "#555" }}>
@@ -104,17 +174,35 @@ export default function PaymentRequestForm({ onSuccess }) {
                 </select>
             </div>
 
+
+
             <div style={{ marginBottom: "24px" }}>
                 <label className="stat-label">Expenses</label>
                 {materials.map((m, index) => (
                     <div key={index} style={{ display: "flex", gap: "12px", marginBottom: "12px", alignItems: "center" }}>
-                        <input
-                            placeholder="Expense Name"
-                            className="input-field"
-                            style={{ flex: 3 }}
-                            value={m.name}
-                            onChange={(e) => updateMaterial(index, "name", e.target.value)}
-                        />
+                        {expenseHeads.length > 0 ? (
+                            <select
+                                className="input-field"
+                                style={{ flex: 3, color: "#000", backgroundColor: "#fff", appearance: "none", cursor: "pointer" }}
+                                value={m.name}
+                                onChange={(e) => updateMaterial(index, "name", e.target.value)}
+                            >
+                                <option value="" style={{ color: "#555" }}>Select Expense Head</option>
+                                {expenseHeads.map((head) => (
+                                    <option key={head} value={head} style={{ color: "#000" }}>
+                                        {head}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <input
+                                placeholder="Expense Name"
+                                className="input-field"
+                                style={{ flex: 3 }}
+                                value={m.name}
+                                onChange={(e) => updateMaterial(index, "name", e.target.value)}
+                            />
+                        )}
                         <input
                             type="number"
                             placeholder="Qty"
@@ -152,6 +240,77 @@ export default function PaymentRequestForm({ onSuccess }) {
                     + Add More
                 </button>
             </div>
+
+            {/* Progress Bar & Notes — shown when project is selected */}
+            {selectedProject && (
+                <div style={{
+                    marginBottom: "24px",
+                    padding: "20px",
+                    borderRadius: "14px",
+                    background: "rgba(59,130,246,0.04)",
+                    border: "1px solid rgba(59,130,246,0.1)"
+                }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                        <label className="stat-label" style={{ margin: 0 }}>📊 Project Progress</label>
+                        <span style={{
+                            fontSize: "18px",
+                            fontWeight: 700,
+                            color: getProgressColor(currentProgress)
+                        }}>
+                            {currentProgress}%
+                        </span>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div style={{
+                        width: "100%",
+                        height: "10px",
+                        borderRadius: "6px",
+                        background: "rgba(0,0,0,0.06)",
+                        overflow: "hidden",
+                        marginBottom: "16px"
+                    }}>
+                        <div style={{
+                            width: `${currentProgress}%`,
+                            height: "100%",
+                            borderRadius: "6px",
+                            background: `linear-gradient(90deg, ${getProgressColor(currentProgress)}, ${getProgressColor(currentProgress)}dd)`,
+                            transition: "width 0.6s ease"
+                        }} />
+                    </div>
+
+                    {/* Update Progress */}
+                    <div style={{ marginBottom: "12px" }}>
+                        <label className="stat-label" style={{ fontSize: "12px" }}>Update Progress: {progressPercentage || currentProgress}%</label>
+                        <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            step="5"
+                            value={progressPercentage || currentProgress}
+                            onChange={(e) => setProgressPercentage(e.target.value)}
+                            style={{ width: "100%", cursor: "pointer", accentColor: getProgressColor(progressPercentage || currentProgress) }}
+                        />
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                            <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+                        </div>
+                    </div>
+
+                    {/* Note input */}
+                    <div style={{ marginBottom: "12px" }}>
+                        <label className="stat-label" style={{ fontSize: "12px" }}>Add Note</label>
+                        <textarea
+                            className="input-field"
+                            placeholder="Progress update, site notes, milestones..."
+                            style={{ minHeight: "60px", resize: "vertical", fontSize: "13px" }}
+                            value={progressNote}
+                            onChange={(e) => setProgressNote(e.target.value)}
+                        />
+                    </div>
+
+
+                </div>
+            )}
 
             <div className="divider" />
 

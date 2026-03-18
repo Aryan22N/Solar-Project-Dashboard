@@ -2,13 +2,37 @@
 
 import { useState } from "react";
 
+const DEFAULT_EXPENSE_HEADS = ["Fuel", "Food", "Material", "Labour", "Misc"];
+
 export default function ProjectCreationModal({ isOpen, onClose, onProjectCreated }) {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [selectedHeads, setSelectedHeads] = useState([...DEFAULT_EXPENSE_HEADS]);
+    const [customHead, setCustomHead] = useState("");
 
     if (!isOpen) return null;
+
+    const toggleHead = (head) => {
+        setSelectedHeads(prev =>
+            prev.includes(head)
+                ? prev.filter(h => h !== head)
+                : [...prev, head]
+        );
+    };
+
+    const addCustomHead = () => {
+        const trimmed = customHead.trim();
+        if (trimmed && !selectedHeads.includes(trimmed)) {
+            setSelectedHeads(prev => [...prev, trimmed]);
+            setCustomHead("");
+        }
+    };
+
+    const removeCustomHead = (head) => {
+        setSelectedHeads(prev => prev.filter(h => h !== head));
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -21,7 +45,7 @@ export default function ProjectCreationModal({ isOpen, onClose, onProjectCreated
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ name, description }),
+                body: JSON.stringify({ name, description, expense_heads: selectedHeads }),
             });
 
             if (!response.ok) {
@@ -32,6 +56,8 @@ export default function ProjectCreationModal({ isOpen, onClose, onProjectCreated
             const newProject = await response.json();
             setName("");
             setDescription("");
+            setSelectedHeads([...DEFAULT_EXPENSE_HEADS]);
+            setCustomHead("");
             onProjectCreated(newProject);
             onClose();
         } catch (err) {
@@ -40,6 +66,9 @@ export default function ProjectCreationModal({ isOpen, onClose, onProjectCreated
             setLoading(false);
         }
     };
+
+    // Separate default heads from custom ones for display
+    const customHeads = selectedHeads.filter(h => !DEFAULT_EXPENSE_HEADS.includes(h));
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -68,15 +97,109 @@ export default function ProjectCreationModal({ isOpen, onClose, onProjectCreated
                         />
                     </div>
 
-                    <div style={{ marginBottom: "24px" }}>
+                    <div style={{ marginBottom: "16px" }}>
                         <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: 500, color: "var(--text-muted)" }}>Description (Optional)</label>
                         <textarea
                             className="input-field"
                             placeholder="Brief project overview..."
-                            style={{ minHeight: "100px", resize: "vertical" }}
+                            style={{ minHeight: "80px", resize: "vertical" }}
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                         />
+                    </div>
+
+                    {/* Expense Heads Section */}
+                    <div style={{ marginBottom: "24px" }}>
+                        <label style={{ display: "block", marginBottom: "10px", fontSize: "14px", fontWeight: 500, color: "var(--text-muted)" }}>Expense Heads</label>
+                        
+                        {/* Default checkboxes */}
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
+                            {DEFAULT_EXPENSE_HEADS.map(head => (
+                                <label
+                                    key={head}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "6px",
+                                        padding: "8px 14px",
+                                        borderRadius: "10px",
+                                        cursor: "pointer",
+                                        fontSize: "13px",
+                                        fontWeight: 500,
+                                        transition: "all 0.2s ease",
+                                        background: selectedHeads.includes(head) ? "rgba(59,130,246,0.1)" : "rgba(0,0,0,0.03)",
+                                        color: selectedHeads.includes(head) ? "var(--primary)" : "var(--text-muted)",
+                                        border: selectedHeads.includes(head) ? "1px solid rgba(59,130,246,0.3)" : "1px solid rgba(0,0,0,0.06)",
+                                    }}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedHeads.includes(head)}
+                                        onChange={() => toggleHead(head)}
+                                        style={{ accentColor: "var(--primary)", width: "15px", height: "15px" }}
+                                    />
+                                    {head}
+                                </label>
+                            ))}
+                        </div>
+
+                        {/* Custom heads display */}
+                        {customHeads.length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "12px" }}>
+                                {customHeads.map(head => (
+                                    <span
+                                        key={head}
+                                        style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "6px",
+                                            padding: "6px 12px",
+                                            borderRadius: "8px",
+                                            fontSize: "13px",
+                                            fontWeight: 500,
+                                            background: "rgba(16,185,129,0.1)",
+                                            color: "#10b981",
+                                            border: "1px solid rgba(16,185,129,0.3)",
+                                        }}
+                                    >
+                                        {head}
+                                        <button
+                                            type="button"
+                                            onClick={() => removeCustomHead(head)}
+                                            style={{ background: "none", border: "none", color: "#10b981", cursor: "pointer", fontSize: "14px", padding: 0, lineHeight: 1 }}
+                                        >
+                                            ✕
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Add custom head */}
+                        <div style={{ display: "flex", gap: "8px" }}>
+                            <input
+                                type="text"
+                                className="input-field"
+                                placeholder="Add custom expense head..."
+                                value={customHead}
+                                onChange={(e) => setCustomHead(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        addCustomHead();
+                                    }
+                                }}
+                                style={{ flex: 1 }}
+                            />
+                            <button
+                                type="button"
+                                className="btn-ghost"
+                                onClick={addCustomHead}
+                                style={{ padding: "8px 16px", fontSize: "13px", whiteSpace: "nowrap" }}
+                            >
+                                + Add
+                            </button>
+                        </div>
                     </div>
 
                     <div style={{ display: "flex", gap: "12px" }}>
@@ -110,10 +233,12 @@ export default function ProjectCreationModal({ isOpen, onClose, onProjectCreated
                     padding: 24px;
                     border-radius: 20px;
                     width: 100%;
-                    max-width: 450px;
+                    max-width: 500px;
                     border: 1px solid rgba(15, 23, 42, 0.08);
                     box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.12);
                     backdrop-filter: blur(20px);
+                    max-height: 90vh;
+                    overflow-y: auto;
                 }
                 @media (min-width: 640px) {
                     .modal-content {

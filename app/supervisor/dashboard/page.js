@@ -4,8 +4,6 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import PaymentRequestForm from "@/components/PaymentRequestForm";
-import PaymentRequestList from "@/components/PaymentRequestList";
-import ProjectProgress from "@/components/ProjectProgress";
 import ShimmerLoader from "@/components/ShimmerLoader";
 
 export default function SupervisorDashboard() {
@@ -13,26 +11,12 @@ export default function SupervisorDashboard() {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [projects, setProjects] = useState([]);
-    const [selectedProjectId, setSelectedProjectId] = useState(null);
 
     useEffect(() => {
-        // Simulate initial loading for better UX
         const timer = setTimeout(() => {
             setIsLoading(false);
         }, 800);
-        
         return () => clearTimeout(timer);
-    }, []);
-
-    useEffect(() => {
-        fetch("/api/projects?status=ACTIVE")
-            .then(res => res.json())
-            .then(data => {
-                setProjects(data);
-                setSelectedProjectId("all");
-            })
-            .catch(err => console.error(err));
     }, []);
 
     const handleLogout = async () => {
@@ -42,14 +26,29 @@ export default function SupervisorDashboard() {
 
     const handleSuccess = () => {
         setRefreshTrigger(prev => prev + 1);
-        // Show shimmer briefly on refresh
         setIsLoading(true);
         setTimeout(() => setIsLoading(false), 500);
     };
 
+    const navBtnStyle = {
+        padding: "14px 28px",
+        fontSize: "15px",
+        fontWeight: 600,
+        borderRadius: "12px",
+        border: "none",
+        cursor: "pointer",
+        transition: "all 0.25s ease",
+        background: "rgba(255,255,255,0.6)",
+        color: "var(--text-muted)",
+        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+        backdropFilter: "blur(8px)",
+        flex: "1 1 0",
+        maxWidth: "280px",
+        textAlign: "center",
+    };
+
     return (
         <div style={{ minHeight: "100vh" }} className="responsive-root">
-
 
             <div className="bg-mesh-custom" />
             <div className="orb1" />
@@ -62,7 +61,7 @@ export default function SupervisorDashboard() {
                     <div className="role-badge role-supervisor" style={{ marginBottom: "12px" }}>🛠️ Supervisor</div>
                     <div style={{ color: "var(--text-muted)", fontSize: "14px" }}>Field Operations</div>
                 </div>
-                
+
                 <button className="mobile-menu-link" style={{ width: "100%", background: "rgba(248, 113, 113, 0.05)", borderColor: "rgba(248, 113, 113, 0.2)", color: "var(--danger)" }} onClick={handleLogout}>
                     <span>🚪</span> Sign Out
                 </button>
@@ -99,45 +98,55 @@ export default function SupervisorDashboard() {
                     <ShimmerLoader />
                 ) : (
                     <>
+                        {/* Welcome */}
+                        <div className="fade-up" style={{ marginBottom: "36px" }}>
+                            <h1 style={{ fontSize: "30px", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "8px" }}>
+                                Good morning, Supervisor 👋
+                            </h1>
+                            <p style={{ color: "var(--text-muted)", fontSize: "15px" }}>
+                                Submit and track material payment requests below.
+                            </p>
+                        </div>
 
-                {/* Welcome */}
-                <div className="fade-up" style={{ marginBottom: "36px" }}>
-                    <h1 style={{ fontSize: "30px", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "8px" }}>
-                        Good morning, Supervisor 👋
-                    </h1>
-                    <p style={{ color: "var(--text-muted)", fontSize: "15px" }}>
-                        Submit and track material payment requests below.
-                    </p>
-                </div>
 
-                <PaymentRequestForm onSuccess={handleSuccess} />
+                        {/* Navigation Buttons */}
+                        <div className="fade-up" style={{ display: "flex", gap: "12px", marginTop: "32px", marginBottom: "32px", flexWrap: "wrap" }}>
+                            <button
+                                style={navBtnStyle}
+                                onClick={() => router.push("/supervisor/dashboard/requests")}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = "linear-gradient(135deg, var(--primary), var(--primary-dark, #1a56db))";
+                                    e.currentTarget.style.color = "#fff";
+                                    e.currentTarget.style.boxShadow = "0 4px 16px rgba(59,130,246,0.25)";
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = "rgba(255,255,255,0.6)";
+                                    e.currentTarget.style.color = "var(--text-muted)";
+                                    e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.06)";
+                                }}
+                            >
+                                📋 Recent Requests
+                            </button>
+                            <button
+                                style={navBtnStyle}
+                                onClick={() => router.push("/supervisor/dashboard/progress")}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = "linear-gradient(135deg, var(--primary), var(--primary-dark, #1a56db))";
+                                    e.currentTarget.style.color = "#fff";
+                                    e.currentTarget.style.boxShadow = "0 4px 16px rgba(59,130,246,0.25)";
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = "rgba(255,255,255,0.6)";
+                                    e.currentTarget.style.color = "var(--text-muted)";
+                                    e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.06)";
+                                }}
+                            >
+                                📊 Project Progress & Notes
+                            </button>
+                        </div>
 
-                <PaymentRequestList 
-                    refreshTrigger={refreshTrigger} 
-                    role="SUPERVISOR" 
-                    limit={3}
-                    showFilter={true}
-                />
+                        <PaymentRequestForm onSuccess={handleSuccess} />
 
-                <div className="divider" style={{ margin: "48px 0" }} />
-
-                <div className="fade-up" style={{ marginBottom: "24px" }}>
-                    <h2 style={{ fontSize: "24px", fontWeight: 700, marginBottom: "16px" }}>Project Progress & Notes</h2>
-                    <label className="stat-label">Select Project to View/Track Progress</label>
-                    <select 
-                        className="input-field" 
-                        style={{ maxWidth: "340px", marginTop: "8px" }}
-                        value={selectedProjectId || "all"}
-                        onChange={(e) => setSelectedProjectId(e.target.value === "all" ? "all" : parseInt(e.target.value))}
-                    >
-                        <option value="all">All Projects</option>
-                        {projects.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                    </select>
-                </div>
-
-                <ProjectProgress projectId={selectedProjectId} role="SUPERVISOR" />
                     </>
                 )}
             </main>

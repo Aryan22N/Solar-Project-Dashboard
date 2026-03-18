@@ -23,23 +23,32 @@ export default function ProjectProgress({ projectId, role }) {
             
             const res = await fetch(url);
             const data = await res.json();
+            const activeUpdates = Array.isArray(data) ? data : [];
             
+            // Dynamic pre-fill: if we have active updates for a specific project,
+            // pre-fill the percentage state with the latest value (first in desc list)
+            if (projectId && projectId !== "all" && activeUpdates.length > 0 && !editingId) {
+                setPercentage(activeUpdates[0].percentage.toString());
+            } else if (projectId === "all") {
+                setPercentage("0");
+            }
+
             // If viewing a specific project, also fetch archived notes
             if (projectId && projectId !== "all") {
                 const archRes = await fetch(`/api/projects/${projectId}/archived`);
                 if (archRes.ok) {
                     const archData = await archRes.json();
-                    setUpdates([...(Array.isArray(data) ? data : []), ...archData]);
+                    setUpdates([...activeUpdates, ...archData]);
                 } else {
-                    setUpdates(Array.isArray(data) ? data : []);
+                    setUpdates(activeUpdates);
                 }
             } else {
-                setUpdates(Array.isArray(data) ? data : []);
+                setUpdates(activeUpdates);
             }
         } catch (err) {
             console.error(err);
         } finally {
-            setLoading(false);
+            if (showLoading) setLoading(false);
         }
     };
 

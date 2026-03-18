@@ -23,7 +23,7 @@ export default function SuperAdminDashboard() {
         const timer = setTimeout(() => {
             setIsLoading(false);
         }, 800);
-        
+
         return () => clearTimeout(timer);
     }, []);
 
@@ -63,6 +63,10 @@ export default function SuperAdminDashboard() {
                     <div style={{ color: "var(--text-muted)", fontSize: "14px" }}>Control Center</div>
                 </div>
 
+                <Link href="/superadmin/projects/progress" className="mobile-menu-link" onClick={() => setIsMenuOpen(false)}>
+                    <span>📈</span> Project Progress
+                </Link>
+
                 <Link href="/superadmin/history" className="mobile-menu-link" onClick={() => setIsMenuOpen(false)}>
                     <span>📜</span> Payment History
                 </Link>
@@ -100,7 +104,8 @@ export default function SuperAdminDashboard() {
                     >
                         + New Project
                     </button>
-                    <Link href="/superadmin/history" className="btn-ghost" style={{ textDecoration: "none", height: "36px", display: "inline-flex", alignItems: "center" }}>📜 Payment History</Link>
+                    <Link href="/superadmin/projects/progress" className="btn-ghost" style={{ textDecoration: "none", height: "36px", display: "inline-flex", alignItems: "center" }}>📈 Project Progress</Link>
+                    <Link href="/superadmin/history" className="btn-ghost" style={{ textDecoration: "none", height: "36px", display: "inline-flex", alignItems: "center" }}>📜 History</Link>
                     <span className="role-badge role-super" style={{ height: "36px", display: "inline-flex", alignItems: "center" }}>⚡ Super Admin</span>
                     <button className="btn-ghost" style={{ height: "36px", display: "inline-flex", alignItems: "center" }} onClick={handleLogout}>Sign Out</button>
                 </div>
@@ -134,76 +139,27 @@ export default function SuperAdminDashboard() {
                 ) : (
                     <>
 
-                {/* Welcome */}
-                <div className="fade-up" style={{ marginBottom: "36px" }}>
-                    <h1 style={{ fontSize: "30px", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "8px" }}>
-                        Good day, Admin 👋
-                    </h1>
-                    <p style={{ color: "var(--text-muted)", fontSize: "15px" }}>
-                        Review approved requests and finalize payments below.
-                    </p>
-                </div>
-
-                <PaymentRequestList 
-                    role="SUPER_ADMIN" 
-                    limit={3}
-                />
-
-                <div className="divider" style={{ margin: "48px 0" }} />
-
-                <div style={{ marginBottom: "24px", display: "flex", alignItems: "flex-end", gap: "16px", flexWrap: "wrap" }}>
-                    <div style={{ flex: 1, minWidth: "200px" }}>
-                        <label className="stat-label">Project Progress Tracking</label>
-                        <select
-                            className="input-field"
-                            style={{ marginTop: "8px" }}
-                            value={selectedProjectId || "all"}
-                            onChange={(e) => setSelectedProjectId(e.target.value === "all" ? "all" : parseInt(e.target.value))}
-                        >
-                            <option value="all">All Projects</option>
-                            {projects.map(p => (
-                                <option key={p.id} value={p.id}>
-                                    {p.name} {p.status === "FINISHED" ? "(Finished)" : ""}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {selectedProjectId && selectedProjectId !== "all" && projects.find(p => p.id === selectedProjectId)?.status !== "FINISHED" && (
-                        <button 
-                            className="btn-primary"
-                            style={{ 
-                                height: "42px", 
-                                width: "auto", 
-                                padding: "0 24px", 
-                                background: "var(--success)", 
-                                borderColor: "var(--success)" 
-                            }}
-                            onClick={async () => {
-                                if (confirm("Are you sure you want to finish this project? All current notes will be archived and the project status will be set to FINISHED.")) {
-                                    try {
-                                        const res = await fetch(`/api/projects/${selectedProjectId}/finish`, { method: "POST" });
-                                        if (res.ok) {
-                                            alert("Project finished successfully!");
-                                            // Refresh projects list
-                                            const freshProjects = await fetch("/api/projects").then(r => r.json());
-                                            setProjects(freshProjects);
-                                        } else {
-                                            const data = await res.json();
-                                            alert(data.error || "Failed to finish project");
-                                        }
-                                    } catch (err) {
-                                        alert("An error occurred");
-                                    }
-                                }
-                            }}
-                        >
-                            ✓ Finish Project
+                        {/* Welcome */}
+                        <div className="fade-up" style={{ marginBottom: "36px" }}>
+                            <h1 style={{ fontSize: "30px", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "8px" }}>
+                                Good day, Admin 👋
+                            </h1>
+                            <p style={{ color: "var(--text-muted)", fontSize: "15px" }}>
+                                Review approved requests and finalize payments below.
+                            </p>
+                        </div>
+                        <button className="btn-primary" style={{ width: "auto", padding: "10px 32px", marginBottom: "20px" }} onClick={() => router.push("/superadmin/projects/progress")}>
+                            View Progress Tracker
                         </button>
-                    )}
-                </div>
 
-                <ProjectProgress projectId={selectedProjectId} role="SUPER_ADMIN" />
+                        <PaymentRequestList
+                            role="SUPER_ADMIN"
+                            limit={3}
+                        />
+
+                        <div className="divider" style={{ margin: "48px 0" }} />
+
+
                     </>
                 )}
             </main>

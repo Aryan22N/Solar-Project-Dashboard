@@ -35,7 +35,7 @@ export async function GET(req, { params }) {
 export async function POST(req, { params }) {
     try {
         const user = await getUser();
-        if (!user || !hasRole(user, ["PROJECT_MANAGER", "SUPERVISOR"])) {
+        if (!user || !hasRole(user, ["SUPER_ADMIN", "PROJECT_MANAGER", "SUPERVISOR"])) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
