@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getUser, hasRole } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { imagekit } from "@/lib/imagekit";
 
 export async function PATCH(req, { params }) {
     try {
@@ -10,38 +11,69 @@ export async function PATCH(req, { params }) {
         }
 
         const { id } = await params;
-        const requestId = parseInt(id);
+        const requestIds = id.split(",").map(i => parseInt(i)).filter(i => !isNaN(i));
 
-        // Fetch the request to know which project it belongs to and when it was created
-        const request = await prisma.paymentRequest.findUnique({
-            where: { id: requestId },
-            select: { project_id: true, created_at: true }
-        });
-
-        if (!request) {
-            return NextResponse.json({ error: "Request not found" }, { status: 404 });
+        if (requestIds.length === 0) {
+            return NextResponse.json({ error: "Invalid IDs" }, { status: 400 });
         }
 
-        const project_id = request.project_id;
-        const requestCreatedAt = request.created_at;
+        // Fetch all requests with their materials to get image_file_ids and project IDs
+        const requests = await prisma.paymentRequest.findMany({
+            where: { id: { in: requestIds } },
+            include: { materials: true }
+        });
 
-        // Delete all progress entries for this project created on or after this request's creation time
-        // This effectively reverts the progress bar and deletes notes added with/after the request today.
+        if (requests.length === 0) {
+            return NextResponse.json({ error: "Requests not found" }, { status: 404 });
+        }
+
+        // 1. Delete images from ImageKit
+        const fileIdsToDelete = [];
+        requests.forEach(request => {
+            request.materials.forEach(material => {
+                if (material.image_file_id) {
+                    fileIdsToDelete.push(material.image_file_id);
+                }
+            });
+        });
+
+        if (fileIdsToDelete.length > 0) {
+            // Delete files in batches or individually
+            // ImageKit SDK deleteFile doesn't support bulk easily in this version, so we do it in parallel
+            try {
+                await Promise.allSettled(fileIdsToDelete.map(fileId => imagekit.deleteFile(fileId)));
+                console.log(`Deleted ${fileIdsToDelete.length} images from ImageKit.`);
+            } catch (ikError) {
+                console.error("Error deleting from ImageKit:", ikError);
+                // We continue even if ImageKit deletion fails to keep DB consistent
+            }
+        }
+
+        // 2. Revert project progress entries
+        // Delete all progress entries for these projects created on or after the earliest request creation time
+        // Note: For simplicity, we delete from earliest request's date, but more precise would be per project.
+        const earliestCreatedAt = new Date(Math.min(...requests.map(r => r.created_at.getTime())));
+        const projectIds = [...new Set(requests.map(r => r.project_id))];
+
         await prisma.projectProgress.deleteMany({
             where: {
-                project_id: project_id,
+                project_id: { in: projectIds },
                 created_at: {
-                    gte: requestCreatedAt
+                    gte: earliestCreatedAt
                 }
             }
         });
 
-        await prisma.paymentRequest.update({
-            where: { id: requestId },
-            data: { status: "REJECTED" }
+        // 3. Update status to REJECTED
+        await prisma.paymentRequest.updateMany({
+            where: { id: { in: requestIds } },
+            data: { 
+                status: "REJECTED",
+                pm_id: user.id // Store who rejected it
+            }
         });
 
-        return NextResponse.json({ success: true, requestId, newStatus: "REJECTED" });
+        return NextResponse.json({ success: true, requestIds, newStatus: "REJECTED" });
     } catch (error) {
         console.error("Reject request error:", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });

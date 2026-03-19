@@ -7,13 +7,17 @@ import Link from "next/link";
 import PaymentRequestList from "@/components/PaymentRequestList";
 import ProjectProgress from "@/components/ProjectProgress";
 import ShimmerLoader from "@/components/ShimmerLoader";
+import BillUploadForm from "@/components/BillUploadForm";
+import RecentBillsList from "@/components/RecentBillsList";
 
 export default function ManagerDashboard() {
     const router = useRouter();
     const [projects, setProjects] = useState([]);
     const [selectedProjectId, setSelectedProjectId] = useState(null);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [showBillForm, setShowBillForm] = useState(false);
 
     useEffect(() => {
         setIsLoading(true);
@@ -50,11 +54,11 @@ export default function ManagerDashboard() {
                     <div className="role-badge role-manager" style={{ marginBottom: "12px" }}>📋 Project Manager</div>
                     <div style={{ color: "var(--text-muted)", fontSize: "14px" }}>Review & Approve</div>
                 </div>
-                
+
                 <Link href="/manager/projects/progress" className="mobile-menu-link" onClick={() => setIsMenuOpen(false)}>
                     <span>📈</span> Project Progress
                 </Link>
-                
+
                 <button className="mobile-menu-link" style={{ width: "100%", background: "rgba(248, 113, 113, 0.05)", borderColor: "rgba(248, 113, 113, 0.2)", color: "var(--danger)" }} onClick={handleLogout}>
                     <span>🚪</span> Sign Out
                 </button>
@@ -102,13 +106,29 @@ export default function ManagerDashboard() {
                             </p>
                         </div>
 
-                        <button 
-                            className="btn-primary fade-up" 
-                            style={{ width: "auto", padding: "10px 32px", marginBottom: "24px" }} 
-                            onClick={() => router.push("/manager/projects/progress")}
-                        >
-                            📈 Open Progress Tracker
-                        </button>
+                        <div style={{ display: "flex", gap: "12px", marginBottom: "24px", flexWrap: "wrap" }}>
+                            <button 
+                                className="btn-primary fade-up" 
+                                style={{ width: "auto", padding: "10px 32px" }} 
+                                onClick={() => router.push("/manager/projects/progress")}
+                            >
+                                📈 Open Progress Tracker and Note
+                            </button>
+                            <button 
+                                className="btn-ghost fade-up" 
+                                style={{ width: "auto", padding: "10px 32px", border: "1px solid var(--border)", background: showBillForm ? "rgba(0,0,0,0.05)" : "white" }} 
+                                onClick={() => setShowBillForm(!showBillForm)}
+                            >
+                                🧾 {showBillForm ? "Close Bill Form" : "Add Bills / Expenses"}
+                            </button>
+                        </div>
+
+                        {showBillForm && (
+                            <BillUploadForm onSuccess={() => {
+                                setShowBillForm(false);
+                                setRefreshTrigger(prev => prev + 1);
+                            }} />
+                        )}
 
                         <PaymentRequestList role="PROJECT_MANAGER" />
 

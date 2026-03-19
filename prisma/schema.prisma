@@ -23,6 +23,7 @@ model User {
   payment_requests PaymentRequest[] @relation("SupervisorRequests")
   approved_requests PaymentRequest[] @relation("PMApprovals")
   progress_updates ProjectProgress[]
+  bills             Bill[]
 
   @@map("users")
 }
@@ -36,6 +37,7 @@ model Project {
   requests         PaymentRequest[]
   progress_updates ProjectProgress[]
   archived_updates ArchivedProgress[]
+  bills            Bill[]
   created_at       DateTime          @default(now())
 
   @@map("projects")
@@ -99,8 +101,24 @@ model Material {
   name       String         @db.VarChar(100)
   quantity   Int
   unit_price Decimal        @db.Decimal(10, 2)
+  image_url  String?        @db.Text
+  image_file_id String?     @db.Text
   request    PaymentRequest @relation(fields: [request_id], references: [id])
   request_id Int
 
   @@map("materials")
+}
+
+model Bill {
+  id              Int      @id @default(autoincrement())
+  name            String   @db.VarChar(100)
+  image_url       String?  @db.Text
+  image_file_id   String?  @db.Text
+  project         Project  @relation(fields: [project_id], references: [id])
+  project_id      Int
+  creator         User     @relation(fields: [creator_id], references: [id])
+  creator_id      Int
+  created_at      DateTime @default(now())
+
+  @@map("bills")
 }

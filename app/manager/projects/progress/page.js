@@ -18,7 +18,12 @@ export default function ManagerProjectProgressPage() {
         setIsLoading(true);
         fetch("/api/projects?status=ACTIVE")
             .then(res => res.json())
-            .then(data => setProjects(data))
+            .then(data => {
+                setProjects(data);
+                if (data && data.length > 0) {
+                    setSelectedProjectId(data[0].id);
+                }
+            })
             .catch(err => console.error(err))
             .finally(() => {
                 setTimeout(() => setIsLoading(false), 600);

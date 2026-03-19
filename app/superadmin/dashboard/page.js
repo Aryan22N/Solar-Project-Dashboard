@@ -66,6 +66,10 @@ export default function SuperAdminDashboard() {
                     <span>📜</span> Payment History
                 </Link>
 
+                <Link href="/superadmin/gallery" className="mobile-menu-link" onClick={() => setIsMenuOpen(false)}>
+                    <span>🖼️</span> Stored Images
+                </Link>
+
                 <button className="mobile-menu-link" style={{ width: "100%", background: "rgba(248, 113, 113, 0.05)", borderColor: "rgba(248, 113, 113, 0.2)", color: "var(--danger)" }} onClick={handleLogout}>
                     <span>🚪</span> Sign Out
                 </button>
@@ -100,6 +104,7 @@ export default function SuperAdminDashboard() {
                         + New Project
                     </button>
                     <Link href="/superadmin/projects/progress" className="btn-ghost" style={{ textDecoration: "none", height: "36px", display: "inline-flex", alignItems: "center" }}>📈 Project Progress</Link>
+                    <Link href="/superadmin/gallery" className="btn-ghost" style={{ textDecoration: "none", height: "36px", display: "inline-flex", alignItems: "center" }}>🖼️ Gallery</Link>
                     <Link href="/superadmin/history" className="btn-ghost" style={{ textDecoration: "none", height: "36px", display: "inline-flex", alignItems: "center" }}>📜 History</Link>
                     <span className="role-badge role-super" style={{ height: "36px", display: "inline-flex", alignItems: "center" }}>⚡ Super Admin</span>
                     <button className="btn-ghost" style={{ height: "36px", display: "inline-flex", alignItems: "center" }} onClick={handleLogout}>Sign Out</button>
@@ -143,9 +148,14 @@ export default function SuperAdminDashboard() {
                                 Review approved requests and finalize payments below.
                             </p>
                         </div>
-                        <button className="btn-primary" style={{ width: "auto", padding: "10px 32px", marginBottom: "20px" }} onClick={() => router.push("/superadmin/projects/progress")}>
-                            View Progress Tracker
-                        </button>
+                        <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
+                            <button className="btn-primary" style={{ width: "auto", padding: "10px 32px" }} onClick={() => router.push("/superadmin/projects/progress")}>
+                                View Progress Tracker and Notes
+                            </button>
+                            <button className="btn-ghost" style={{ width: "auto", padding: "10px 32px", border: "1px solid var(--border)" }} onClick={() => router.push("/superadmin/gallery")}>
+                                🖼️ View Stored Images
+                            </button>
+                        </div>
 
                         <PaymentRequestList
                             role="SUPER_ADMIN"

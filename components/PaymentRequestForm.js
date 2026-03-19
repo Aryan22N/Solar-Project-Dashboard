@@ -1,21 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import CameraCapture from "./CameraCapture";
+import {
+    ImageKitAbortError,
+    ImageKitInvalidRequestError,
+    ImageKitServerError,
+    ImageKitUploadNetworkError,
+    upload,
+} from "@imagekit/next";
 
 export default function PaymentRequestForm({ onSuccess }) {
     const [projects, setProjects] = useState([]);
     const [selectedProject, setSelectedProject] = useState("");
-    const [materials, setMaterials] = useState([{ name: "", quantity: "", unit_price: "" }]);
+    const [materials, setMaterials] = useState([{ name: "", quantity: "", unit_price: "", image_url: "", image_file_id: "" }]);
     const [loading, setLoading] = useState(false);
+    const [uploading, setUploading] = useState(null); // index of material being uploaded
     const [error, setError] = useState("");
     const [expenseHeads, setExpenseHeads] = useState([]);
 
-    // Progress & Notes state
-    const [currentProgress, setCurrentProgress] = useState(0);
-    const [progressNote, setProgressNote] = useState("");
-    const [progressPercentage, setProgressPercentage] = useState("");
-    const [savingProgress, setSavingProgress] = useState(false);
-    const [progressSaved, setProgressSaved] = useState(false);
+    // Camera state
+    const [showCamera, setShowCamera] = useState(false);
+    const [activeMaterialIndex, setActiveMaterialIndex] = useState(null);
+    const fileInputRef = useRef(null);
+
+
 
     useEffect(() => {
         fetch("/api/projects?status=ACTIVE")
@@ -24,42 +33,34 @@ export default function PaymentRequestForm({ onSuccess }) {
             .catch(err => console.error("Error fetching projects:", err));
     }, []);
 
-    // When project changes, update expense heads and fetch progress
+    // Track previous project to avoid unnecessary resets
+    const [prevProjectId, setPrevProjectId] = useState("");
+
+    // When project changes, update expense heads
     useEffect(() => {
         if (selectedProject) {
+            if (activeMaterialIndex === null) { // Only update heads if not currently interacting (minor safety)
+            }
             const project = projects.find(p => p.id === parseInt(selectedProject));
             if (project && project.expense_heads && project.expense_heads.length > 0) {
                 setExpenseHeads(project.expense_heads);
             } else {
                 setExpenseHeads([]);
             }
-            setMaterials([{ name: "", quantity: "", unit_price: "" }]);
 
-            // Fetch latest progress for this project
-            fetch(`/api/projects/${selectedProject}/progress`)
-                .then(res => res.json())
-                .then(data => {
-                    if (Array.isArray(data) && data.length > 0) {
-                        setCurrentProgress(data[0].percentage || 0);
-                    } else {
-                        setCurrentProgress(0);
-                    }
-                })
-                .catch(() => setCurrentProgress(0));
-
-            setProgressNote("");
-            setProgressPercentage("");
-            setProgressSaved(false);
+            // Only reset materials if the project ID actually changed from its previous value
+            if (selectedProject !== prevProjectId) {
+                setMaterials([{ name: "", quantity: "", unit_price: "", image_url: "", image_file_id: "" }]);
+                setPrevProjectId(selectedProject);
+            }
         } else {
             setExpenseHeads([]);
-            setCurrentProgress(0);
-            setProgressNote("");
-            setProgressPercentage("");
+            setPrevProjectId("");
         }
-    }, [selectedProject, projects]);
+    }, [selectedProject, projects, prevProjectId]);
 
     const addMaterial = () => {
-        setMaterials([...materials, { name: "", quantity: 1, unit_price: 0 }]);
+        setMaterials([...materials, { name: "", quantity: 1, unit_price: 0, image_url: "", image_file_id: "" }]);
     };
 
     const removeMaterial = (index) => {
@@ -72,7 +73,65 @@ export default function PaymentRequestForm({ onSuccess }) {
         setMaterials(newMaterials);
     };
 
-    const totalAmount = materials.reduce((sum, m) => sum + (m.quantity * m.unit_price), 0);
+    const authenticator = async () => {
+        try {
+            const response = await fetch("/api/upload-auth");
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Auth failed (${response.status}): ${errorText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Authenticator error:", error);
+            throw new Error("Failed to authenticate for upload");
+        }
+    };
+
+    const handleImageUpload = async (index, fileOrDataUrl) => {
+        setUploading(index);
+        setError("");
+
+        try {
+            // 1. Authenticate
+            const authParams = await authenticator();
+            console.log("Client-side Auth Params received:", authParams);
+            const { signature, expire, token, publicKey, urlEndpoint } = authParams;
+
+            // 2. Upload using @imagekit/next
+            const uploadResult = await upload({
+                file: fileOrDataUrl,
+                fileName: `material_${Date.now()}.jpg`,
+                folder: "/materials",
+                signature,
+                expire,
+                token,
+                publicKey,
+                urlEndpoint,
+                onProgress: (event) => {
+                    // Optional: could add local progress state per material if needed
+                    console.log(`Upload Progress: ${(event.loaded / event.total) * 100}%`);
+                }
+            });
+
+            updateMaterial(index, "image_url", uploadResult.url);
+            updateMaterial(index, "image_file_id", uploadResult.fileId);
+        } catch (err) {
+            console.error("Full Upload Error:", err);
+            let errorMessage = "Failed to upload photo";
+            
+            if (err instanceof ImageKitAbortError) errorMessage = "Upload aborted";
+            else if (err instanceof ImageKitInvalidRequestError) errorMessage = "Invalid upload request";
+            else if (err instanceof ImageKitUploadNetworkError) errorMessage = "Network error during upload";
+            else if (err instanceof ImageKitServerError) errorMessage = "ImageKit server error";
+            else if (err.message) errorMessage = err.message;
+
+            setError(`Upload Error: ${errorMessage}`);
+        } finally {
+            setUploading(null);
+        }
+    };
+
+    const totalAmount = materials.reduce((sum, m) => sum + (m.quantity * (m.unit_price || 0)), 0);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -94,34 +153,19 @@ export default function PaymentRequestForm({ onSuccess }) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     project_id: selectedProject,
-                    materials,
+                    materials: materials.map(m => ({
+                        name: m.name,
+                        quantity: m.quantity,
+                        unit_price: m.unit_price,
+                        image_url: m.image_url,
+                        image_file_id: m.image_file_id
+                    })),
                     total_amount: totalAmount
                 })
             });
 
             if (response.ok) {
-                // Auto-save progress & note if provided
-                if (progressNote.trim() || progressPercentage) {
-                    try {
-                        const today = new Date();
-                        const dateStr = today.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
-                        await fetch(`/api/projects/${selectedProject}/progress`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                percentage: progressPercentage || currentProgress,
-                                date: dateStr,
-                                notes: progressNote
-                            })
-                        });
-                    } catch (err) {
-                        console.error("Error saving progress:", err);
-                    }
-                }
-
-                setMaterials([{ name: "", quantity: 1, unit_price: 0 }]);
-                setProgressNote("");
-                setProgressPercentage("");
+                setMaterials([{ name: "", quantity: 1, unit_price: 0, image_url: "", image_file_id: "" }]);
                 setSelectedProject("");
                 onSuccess();
             } else {
@@ -135,12 +179,7 @@ export default function PaymentRequestForm({ onSuccess }) {
         }
     };
 
-    const getProgressColor = (pct) => {
-        if (pct >= 75) return "#10b981";
-        if (pct >= 50) return "#3b82f6";
-        if (pct >= 25) return "#f59e0b";
-        return "#ef4444";
-    };
+
 
     return (
         <form onSubmit={handleSubmit} className="glass-card fade-up" style={{ padding: "32px", marginBottom: "32px" }}>
@@ -177,139 +216,138 @@ export default function PaymentRequestForm({ onSuccess }) {
 
 
             <div style={{ marginBottom: "24px" }}>
-                <label className="stat-label">Expenses</label>
+                <label className="stat-label">Expenses & Material Photos</label>
                 {materials.map((m, index) => (
-                    <div key={index} style={{ display: "flex", gap: "12px", marginBottom: "12px", alignItems: "center" }}>
-                        {expenseHeads.length > 0 ? (
-                            <select
-                                className="input-field"
-                                style={{ flex: 3, color: "#000", backgroundColor: "#fff", appearance: "none", cursor: "pointer" }}
-                                value={m.name}
-                                onChange={(e) => updateMaterial(index, "name", e.target.value)}
-                            >
-                                <option value="" style={{ color: "#555" }}>Select Expense Head</option>
-                                {expenseHeads.map((head) => (
-                                    <option key={head} value={head} style={{ color: "#000" }}>
-                                        {head}
-                                    </option>
-                                ))}
-                            </select>
-                        ) : (
+                    <div key={index} style={{ marginBottom: "16px", padding: "16px", background: "rgba(0,0,0,0.02)", borderRadius: "12px", border: "1px solid rgba(0,0,0,0.05)" }}>
+                        <div style={{ display: "flex", gap: "12px", marginBottom: "12px", alignItems: "center" }}>
+                            {expenseHeads.length > 0 ? (
+                                <select
+                                    className="input-field"
+                                    style={{ flex: 3, color: "#000", backgroundColor: "#fff", appearance: "none", cursor: "pointer" }}
+                                    value={m.name}
+                                    onChange={(e) => updateMaterial(index, "name", e.target.value)}
+                                >
+                                    <option value="" style={{ color: "#555" }}>Select Expense Head</option>
+                                    {expenseHeads.map((head) => (
+                                        <option key={head} value={head} style={{ color: "#000" }}>
+                                            {head}
+                                        </option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <input
+                                    placeholder="Expense Name"
+                                    className="input-field"
+                                    style={{ flex: 3 }}
+                                    value={m.name}
+                                    onChange={(e) => updateMaterial(index, "name", e.target.value)}
+                                />
+                            )}
                             <input
-                                placeholder="Expense Name"
+                                type="number"
+                                placeholder="Qty"
                                 className="input-field"
-                                style={{ flex: 3 }}
-                                value={m.name}
-                                onChange={(e) => updateMaterial(index, "name", e.target.value)}
+                                style={{ flex: 1 }}
+                                value={m.quantity}
+                                onChange={(e) => updateMaterial(index, "quantity", e.target.value)}
                             />
-                        )}
-                        <input
-                            type="number"
-                            placeholder="Qty"
-                            className="input-field"
-                            style={{ flex: 1 }}
-                            value={m.quantity}
-                            onChange={(e) => updateMaterial(index, "quantity", e.target.value)}
-                        />
-                        <input
-                            type="number"
-                            step="0.01"
-                            placeholder="Price"
-                            className="input-field"
-                            style={{ flex: 1.5 }}
-                            value={m.unit_price}
-                            onChange={(e) => updateMaterial(index, "unit_price", e.target.value)}
-                        />
-                        {materials.length > 1 && (
-                            <button
-                                type="button"
-                                onClick={() => removeMaterial(index)}
-                                style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer", fontSize: "18px" }}
-                            >
-                                ✕
-                            </button>
-                        )}
+                            <input
+                                type="number"
+                                step="0.01"
+                                placeholder="Price"
+                                className="input-field"
+                                style={{ flex: 1.5 }}
+                                value={m.unit_price}
+                                onChange={(e) => updateMaterial(index, "unit_price", e.target.value)}
+                            />
+                            {materials.length > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={() => removeMaterial(index)}
+                                    style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer", fontSize: "18px" }}
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Image Upload/Capture Section */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                            {m.image_url ? (
+                                <div style={{ position: "relative", width: "60px", height: "60px", borderRadius: "8px", overflow: "hidden", border: "1px solid var(--border)" }}>
+                                    <img src={m.image_url} alt="Material" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                    <button
+                                        type="button"
+                                        onClick={() => updateMaterial(index, "image_url", "")}
+                                        style={{ position: "absolute", top: 2, right: 2, background: "rgba(255,255,255,0.8)", border: "none", borderRadius: "50%", width: "16px", height: "16px", fontSize: "10px", cursor: "pointer" }}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ) : (
+                                <div style={{ display: "flex", gap: "8px" }}>
+                                    <button
+                                        type="button"
+                                        className="btn-ghost"
+                                        style={{ fontSize: "11px", padding: "6px 12px", display: "flex", alignItems: "center", gap: "4px" }}
+                                        onClick={() => {
+                                            setActiveMaterialIndex(index);
+                                            setShowCamera(true);
+                                        }}
+                                        disabled={uploading === index}
+                                    >
+                                        📷 {uploading === index ? "Uploading..." : "Capture Photo"}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn-ghost"
+                                        style={{ fontSize: "11px", padding: "6px 12px", display: "flex", alignItems: "center", gap: "4px" }}
+                                        onClick={() => {
+                                            setActiveMaterialIndex(index);
+                                            fileInputRef.current?.click();
+                                        }}
+                                        disabled={uploading === index}
+                                    >
+                                        📁 Upload File
+                                    </button>
+                                </div>
+                            )}
+                            {uploading === index && <span className="spinner" style={{ width: "14px", height: "14px", borderTopColor: "var(--primary)" }}></span>}
+                            {!m.image_url && <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>* Photo of material/receipt is recommended</span>}
+                        </div>
                     </div>
                 ))}
+
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    style={{ display: "none" }}
+                    accept="image/*"
+                    onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                            handleImageUpload(activeMaterialIndex, e.target.files[0]);
+                        }
+                    }}
+                />
+
                 <button
                     type="button"
                     className="btn-ghost"
                     onClick={addMaterial}
                     style={{ width: "auto", fontSize: "12px" }}
                 >
-                    + Add More
+                    + Add More Expenses
                 </button>
             </div>
 
-            {/* Progress Bar & Notes — shown when project is selected */}
-            {selectedProject && (
-                <div style={{
-                    marginBottom: "24px",
-                    padding: "20px",
-                    borderRadius: "14px",
-                    background: "rgba(59,130,246,0.04)",
-                    border: "1px solid rgba(59,130,246,0.1)"
-                }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                        <label className="stat-label" style={{ margin: 0 }}>📊 Project Progress</label>
-                        <span style={{
-                            fontSize: "18px",
-                            fontWeight: 700,
-                            color: getProgressColor(currentProgress)
-                        }}>
-                            {currentProgress}%
-                        </span>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div style={{
-                        width: "100%",
-                        height: "10px",
-                        borderRadius: "6px",
-                        background: "rgba(0,0,0,0.06)",
-                        overflow: "hidden",
-                        marginBottom: "16px"
-                    }}>
-                        <div style={{
-                            width: `${currentProgress}%`,
-                            height: "100%",
-                            borderRadius: "6px",
-                            background: `linear-gradient(90deg, ${getProgressColor(currentProgress)}, ${getProgressColor(currentProgress)}dd)`,
-                            transition: "width 0.6s ease"
-                        }} />
-                    </div>
-
-                    {/* Update Progress */}
-                    <div style={{ marginBottom: "12px" }}>
-                        <label className="stat-label" style={{ fontSize: "12px" }}>Update Progress: {progressPercentage || currentProgress}%</label>
-                        <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            step="5"
-                            value={progressPercentage || currentProgress}
-                            onChange={(e) => setProgressPercentage(e.target.value)}
-                            style={{ width: "100%", cursor: "pointer", accentColor: getProgressColor(progressPercentage || currentProgress) }}
-                        />
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
-                            <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
-                        </div>
-                    </div>
-
-                    {/* Note input */}
-                    <div style={{ marginBottom: "12px" }}>
-                        <label className="stat-label" style={{ fontSize: "12px" }}>Add Note</label>
-                        <textarea
-                            className="input-field"
-                            placeholder="Progress update, site notes, milestones..."
-                            style={{ minHeight: "60px", resize: "vertical", fontSize: "13px" }}
-                            value={progressNote}
-                            onChange={(e) => setProgressNote(e.target.value)}
-                        />
-                    </div>
-
-
-                </div>
+            {showCamera && (
+                <CameraCapture
+                    onCapture={(dataUrl) => handleImageUpload(activeMaterialIndex, dataUrl)}
+                    onClose={() => {
+                        setShowCamera(false);
+                        setActiveMaterialIndex(null);
+                    }}
+                />
             )}
 
             <div className="divider" />

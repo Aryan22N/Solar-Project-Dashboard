@@ -6,7 +6,16 @@ export default function ProjectProgress({ projectId, role }) {
     const [updates, setUpdates] = useState([]);
     const [loading, setLoading] = useState(true);
     const [percentage, setPercentage] = useState("");
-    const [date, setDate] = useState("");
+    
+    // Default to today's date in '14 March 2024' format
+    const getTodayFormatted = () => {
+        return new Date().toLocaleDateString("en-IN", { 
+            day: "numeric", 
+            month: "long", 
+            year: "numeric" 
+        });
+    };
+    const [date, setDate] = useState(getTodayFormatted());
     const [notes, setNotes] = useState("");
     const [editingId, setEditingId] = useState(null);
     const [submitting, setSubmitting] = useState(false);
@@ -87,7 +96,7 @@ export default function ProjectProgress({ projectId, role }) {
 
             if (res.ok) {
                 setPercentage("");
-                setDate("");
+                setDate(getTodayFormatted());
                 setNotes("");
                 setEditingId(null);
                 fetchUpdates(false);
@@ -113,7 +122,7 @@ export default function ProjectProgress({ projectId, role }) {
     const cancelEdit = () => {
         setEditingId(null);
         setPercentage("");
-        setDate("");
+        setDate(getTodayFormatted());
         setNotes("");
         setError("");
     };

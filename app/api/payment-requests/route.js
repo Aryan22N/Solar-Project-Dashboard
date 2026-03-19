@@ -166,6 +166,8 @@ export async function POST(req) {
                 name: m.name,
                 quantity: parseInt(m.quantity),
                 unit_price: parseFloat(m.unit_price),
+                image_url: m.image_url || null,
+                image_file_id: m.image_file_id || null,
                 request_id: existingRequest.id
             }));
 
@@ -195,7 +197,9 @@ export async function POST(req) {
                     create: materials.map(m => ({
                         name: m.name,
                         quantity: parseInt(m.quantity),
-                        unit_price: parseFloat(m.unit_price)
+                        unit_price: parseFloat(m.unit_price),
+                        image_url: m.image_url || null,
+                        image_file_id: m.image_file_id || null
                     }))
                 }
             },

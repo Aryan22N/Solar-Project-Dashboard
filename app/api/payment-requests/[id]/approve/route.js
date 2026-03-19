@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getUser, hasRole } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { imagekit } from "@/lib/imagekit";
 
 export async function PATCH(req, { params }) {
     try {
@@ -10,28 +11,59 @@ export async function PATCH(req, { params }) {
         }
 
         const { id } = await params;
-        const requestId = parseInt(id);
+        const requestIds = id.split(",").map(i => parseInt(i)).filter(i => !isNaN(i));
+        
+        const body = await req.json().catch(() => ({}));
+        const { deleteFileIds } = body;
 
-        const request = await prisma.paymentRequest.findUnique({
-            where: { id: requestId }
+        if (requestIds.length === 0) {
+            return NextResponse.json({ error: "Invalid IDs" }, { status: 400 });
+        }
+
+        const requests = await prisma.paymentRequest.findMany({
+            where: { id: { in: requestIds } }
         });
 
-        if (!request) {
-            return NextResponse.json({ error: "Request not found" }, { status: 404 });
+        if (requests.length === 0) {
+            return NextResponse.json({ error: "Requests not found" }, { status: 404 });
         }
 
         let nextStatus;
 
         if (hasRole(user, "PROJECT_MANAGER")) {
-            if (request.status !== "PENDING_PM") {
-                return NextResponse.json({ error: "Invalid status transition" }, { status: 400 });
+            if (requests.some(r => r.status !== "PENDING_PM")) {
+                return NextResponse.json({ error: "One or more requests have invalid status for Manager approval" }, { status: 400 });
             }
             nextStatus = "PENDING_ADMIN";
         } else if (hasRole(user, "SUPER_ADMIN")) {
-            if (request.status !== "PENDING_ADMIN") {
-                return NextResponse.json({ error: "Invalid status transition" }, { status: 400 });
+            if (requests.some(r => r.status !== "PENDING_ADMIN")) {
+                return NextResponse.json({ error: "One or more requests have invalid status for Admin approval" }, { status: 400 });
             }
             nextStatus = "PAID";
+
+            // Process selective image deletion if provided by Super Admin
+            if (Array.isArray(deleteFileIds) && deleteFileIds.length > 0) {
+                try {
+                    // 1. Delete from ImageKit
+                    await Promise.allSettled(deleteFileIds.map(fileId => imagekit.deleteFile(fileId)));
+                    
+                    // 2. Clear relevant material records in DB
+                    await prisma.material.updateMany({
+                        where: {
+                            request_id: { in: requestIds },
+                            image_file_id: { in: deleteFileIds }
+                        },
+                        data: {
+                            image_url: null,
+                            image_file_id: null
+                        }
+                    });
+                    console.log(`Selective deletion: ${deleteFileIds.length} images deleted and cleared.`);
+                } catch (ikError) {
+                    console.error("Selective deletion error:", ikError);
+                    // Continue with approval even if deletion fails
+                }
+            }
         } else {
             return NextResponse.json({ error: "Unauthorized role" }, { status: 401 });
         }
@@ -41,13 +73,12 @@ export async function PATCH(req, { params }) {
             updateData.pm_id = user.id;
         }
 
-        // Only update and return minimal data - no need to include relations
-        await prisma.paymentRequest.update({
-            where: { id: requestId },
+        await prisma.paymentRequest.updateMany({
+            where: { id: { in: requestIds } },
             data: updateData
         });
 
-        return NextResponse.json({ success: true, requestId, newStatus: nextStatus });
+        return NextResponse.json({ success: true, requestIds, newStatus: nextStatus });
     } catch (error) {
         console.error("Approve request error:", error);
         return NextResponse.json({ error: "Server error" }, { status: 500 });
