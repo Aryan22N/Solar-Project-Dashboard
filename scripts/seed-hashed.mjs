@@ -21,19 +21,19 @@ async function main() {
     {
       name: 'Super Admin',
       phone: '8888888888',
-      dob: '1990-01-01',
+      dob: '01011990',
       role: 'SUPER_ADMIN',
     },
     {
       name: 'Project Manager',
       phone: '7777777777',
-      dob: '1990-01-01',
+      dob: '01011990',
       role: 'PROJECT_MANAGER',
     },
     {
       name: 'Supervisor',
       phone: '6666666666',
-      dob: '1990-01-01',
+      dob: '01011990',
       role: 'SUPERVISOR',
     },
   ];

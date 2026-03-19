@@ -294,9 +294,10 @@ export default function LoginPage() {
                                 <span style={styles.inputIcon}>📅</span>
                                 <input
                                     id="dob"
-                                    type="date"
+                                    type="tel"
+                                    placeholder="DDMMYYYY"
                                     value={dob}
-                                    onChange={(e) => setDob(e.target.value)}
+                                    onChange={(e) => setDob(e.target.value.replace(/\D/g, "").slice(0, 8))}
                                     required
                                     style={styles.input}
                                 />
