@@ -21,6 +21,12 @@ export default function ProjectProgress({ projectId, role }) {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
 
+    const parseDateForInput = (dateStr) => {
+        if (!dateStr) return "";
+        const d = new Date(dateStr);
+        return isNaN(d.getTime()) ? "" : d.toISOString().split("T")[0];
+    };
+
     const canEdit = role === "PROJECT_MANAGER" || role === "SUPERVISOR";
 
     const fetchUpdates = async (showLoading = true) => {
@@ -159,13 +165,21 @@ export default function ProjectProgress({ projectId, role }) {
 
                     <div style={{ display: "flex", gap: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
                         <div style={{ flex: "1 1 180px" }}>
-                            <label className="stat-label">Date (Manual)</label>
+                            <label className="stat-label">Date</label>
                             <input
-                                type="text"
+                                type="date"
                                 className="input-field"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                placeholder="e.g. 14 March 2024"
+                                value={parseDateForInput(date)}
+                                onChange={(e) => {
+                                    const d = new Date(e.target.value);
+                                    if (!isNaN(d.getTime())) {
+                                        setDate(d.toLocaleDateString("en-IN", { 
+                                            day: "numeric", 
+                                            month: "long", 
+                                            year: "numeric" 
+                                        }));
+                                    }
+                                }}
                             />
                         </div>
                     </div>

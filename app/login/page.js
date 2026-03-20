@@ -21,7 +21,10 @@ export default function LoginPage() {
             const res = await fetch("/api/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ phone, dob }),
+                body: JSON.stringify({ 
+                    phone, 
+                    dob: dob.split("-").reverse().join("") 
+                }),
             });
 
             const data = await res.json();
@@ -294,12 +297,14 @@ export default function LoginPage() {
                                 <span style={styles.inputIcon}>📅</span>
                                 <input
                                     id="dob"
-                                    type="tel"
-                                    placeholder="DDMMYYYY"
+                                    type="date"
                                     value={dob}
-                                    onChange={(e) => setDob(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                                    onChange={(e) => setDob(e.target.value)}
                                     required
-                                    style={styles.input}
+                                    style={{
+                                        ...styles.input,
+                                        colorScheme: "light",
+                                    }}
                                 />
                             </div>
                             <p style={styles.hint}>Your date of birth serves as your password.</p>

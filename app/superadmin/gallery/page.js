@@ -39,11 +39,7 @@ export default function StoredImagesGallery() {
             const data = await res.json();
             setProjects(data);
             if (data && data.length > 0 && selectedProject === "all") {
-                // This line was causing a syntax error in the user's provided snippet.
-                // It seems like the user intended to add filtering logic, but placed it incorrectly.
-                // I'm keeping the original logic for setting selectedProject if it's "all" and projects are available.
-                // The filtering logic will be applied separately.
-                // setSelectedProject(data[0].id.toString()); // Removed this line as it was causing an issue with "all" option
+                setSelectedProject(data[0].id.toString());
             }
         } catch (err) {
             console.error("Fetch projects error:", err);

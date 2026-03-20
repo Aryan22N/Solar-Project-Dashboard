@@ -9,6 +9,7 @@ import ProjectCreationModal from "@/components/ProjectCreationModal";
 import ProjectProgress from "@/components/ProjectProgress";
 import { useEffect } from "react";
 import ShimmerLoader from "@/components/ShimmerLoader";
+import ProjectEditModal from "@/components/ProjectEditModal";
 
 export default function SuperAdminDashboard() {
     const router = useRouter();
@@ -17,19 +18,23 @@ export default function SuperAdminDashboard() {
     const [projects, setProjects] = useState([]);
     const [selectedProjectId, setSelectedProjectId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [projectToEdit, setProjectToEdit] = useState(null);
 
-    useEffect(() => {
-        setIsLoading(true);
+    const fetchProjects = () => {
         fetch("/api/projects")
             .then(res => res.json())
             .then(data => {
                 setProjects(data);
-                setSelectedProjectId("all");
+                if (!selectedProjectId) setSelectedProjectId("all");
             })
-            .catch(err => console.error(err))
-            .finally(() => {
-                setTimeout(() => setIsLoading(false), 600);
-            });
+            .catch(err => console.error(err));
+    };
+
+    useEffect(() => {
+        setIsLoading(true);
+        fetchProjects();
+        setTimeout(() => setIsLoading(false), 600);
     }, []);
 
     const handleLogout = async () => {
@@ -38,8 +43,11 @@ export default function SuperAdminDashboard() {
     };
 
     const handleProjectCreated = (newProject) => {
-        console.log("Project created:", newProject);
-        // Optionally refresh project lists if they exist
+        fetchProjects();
+    };
+
+    const handleProjectUpdated = (updatedProject) => {
+        fetchProjects();
     };
 
     return (
@@ -157,6 +165,32 @@ export default function SuperAdminDashboard() {
                             </button>
                         </div>
 
+                        <div className="fade-up" style={{ marginBottom: "36px" }}>
+                            <h2 className="section-title">Manage Projects</h2>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
+                                {projects.map(project => (
+                                    <div key={project.id} className="glass-card" style={{ padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                        <div>
+                                            <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "4px" }}>{project.name}</div>
+                                            <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                                                {project.expense_heads?.length || 0} Heads • <span style={{ color: project.status === "ACTIVE" ? "var(--success)" : "var(--text-muted)" }}>{project.status}</span>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            className="btn-ghost" 
+                                            onClick={() => {
+                                                setProjectToEdit(project);
+                                                setIsEditModalOpen(true);
+                                            }}
+                                            style={{ padding: "6px 14px", fontSize: "12px", borderRadius: "8px" }}
+                                        >
+                                            Edit
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
                         <PaymentRequestList
                             role="SUPER_ADMIN"
                             limit={3}
@@ -173,6 +207,12 @@ export default function SuperAdminDashboard() {
                 isOpen={isProjectModalOpen}
                 onClose={() => setIsProjectModalOpen(false)}
                 onProjectCreated={handleProjectCreated}
+            />
+            <ProjectEditModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                project={projectToEdit}
+                onProjectUpdated={handleProjectUpdated}
             />
         </div>
     );
