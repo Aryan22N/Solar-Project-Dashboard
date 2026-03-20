@@ -176,16 +176,51 @@ export default function SuperAdminDashboard() {
                                                 {project.expense_heads?.length || 0} Heads • <span style={{ color: project.status === "ACTIVE" ? "var(--success)" : "var(--text-muted)" }}>{project.status}</span>
                                             </div>
                                         </div>
-                                        <button 
-                                            className="btn-ghost" 
-                                            onClick={() => {
-                                                setProjectToEdit(project);
-                                                setIsEditModalOpen(true);
-                                            }}
-                                            style={{ padding: "6px 14px", fontSize: "12px", borderRadius: "8px" }}
-                                        >
-                                            Edit
-                                        </button>
+                                        <div style={{ display: "flex", gap: "8px" }}>
+                                            <button 
+                                                className="btn-ghost" 
+                                                onClick={() => {
+                                                    setProjectToEdit(project);
+                                                    setIsEditModalOpen(true);
+                                                }}
+                                                style={{ padding: "6px 14px", fontSize: "12px", borderRadius: "8px" }}
+                                            >
+                                                Edit
+                                            </button>
+                                            <button 
+                                                className={project.status === "ACTIVE" ? "btn-primary" : "btn-ghost"}
+                                                style={{ 
+                                                    height: "36px", 
+                                                    width: "auto", 
+                                                    padding: "0 12px", 
+                                                    fontSize: "12px",
+                                                    borderRadius: "8px",
+                                                    background: project.status === "ACTIVE" ? "var(--success)" : "rgba(59,130,246,0.1)", 
+                                                    borderColor: project.status === "ACTIVE" ? "var(--success)" : "rgba(59,130,246,0.2)",
+                                                    color: project.status === "ACTIVE" ? "#fff" : "var(--primary)"
+                                                }}
+                                                onClick={async () => {
+                                                    const isFinish = project.status === "ACTIVE";
+                                                    const action = isFinish ? "finish" : "unarchive";
+                                                    if (confirm(`Are you sure you want to ${isFinish ? "finish" : "unarchive"} this project? ${isFinish ? "All current notes will be archived." : ""}`)) {
+                                                        try {
+                                                            const res = await fetch(`/api/projects/${project.id}/${action}`, { method: "POST" });
+                                                            if (res.ok) {
+                                                                alert(`Project ${isFinish ? "finished" : "unarchived"} successfully!`);
+                                                                fetchProjects();
+                                                            } else {
+                                                                const data = await res.json();
+                                                                alert(data.error || `Failed to ${action} project`);
+                                                            }
+                                                        } catch (err) {
+                                                            alert("An error occurred");
+                                                        }
+                                                    }
+                                                }}
+                                            >
+                                                {project.status === "ACTIVE" ? "✓ Finish" : "↺ Unarchive"}
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

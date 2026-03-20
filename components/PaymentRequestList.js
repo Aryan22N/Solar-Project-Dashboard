@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Toast from "./Toast";
 
 export default function PaymentRequestList({ refreshTrigger, role, limit = null, showFilter = false }) {
@@ -31,14 +31,17 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
         }
     };
 
+    const initialSelectRef = useRef(false);
+
     const fetchProjects = async () => {
         try {
             const res = await fetch("/api/projects");
             const data = await res.json();
             const projectList = Array.isArray(data) ? data : [];
             setProjects(projectList);
-            if (projectList.length > 0 && selectedProjectId === null) {
+            if (projectList.length > 0 && selectedProjectId === null && !initialSelectRef.current) {
                 setSelectedProjectId(projectList[0].id);
+                initialSelectRef.current = true;
             }
         } catch (err) {
             console.error(err);

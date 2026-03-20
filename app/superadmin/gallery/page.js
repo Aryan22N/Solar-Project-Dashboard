@@ -47,8 +47,11 @@ export default function StoredImagesGallery() {
     };
 
     useEffect(() => {
-        fetchMaterials(selectedProject);
         fetchProjects();
+    }, []);
+
+    useEffect(() => {
+        fetchMaterials(selectedProject);
     }, [selectedProject]);
 
     const addToast = (title, message, type = "success") => {
