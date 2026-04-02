@@ -271,7 +271,7 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
                                 <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px", flexWrap: "wrap" }}>
                                     <span style={{ fontWeight: 700, fontSize: "16px" }}>{req.project?.name}</span>
                                     <span className="role-badge" style={{ background: `${getStatusColor(req.status)}20`, color: getStatusColor(req.status), border: `1px solid ${getStatusColor(req.status)}30` }}>
-                                        {req.isClubbed ? `${req.status.replace("_", " ")} (ALL)` : req.status.replace("_", " ")}
+                                        {(req.isClubbed && req.requestIds?.length > 1) ? `${req.status.replace("_", " ")} (ALL)` : req.status.replace("_", " ")}
                                     </span>
                                 </div>
                                 <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>
@@ -343,7 +343,7 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
                                                 }}
                                                 disabled={actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id)}
                                             >
-                                                {actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id) ? "Processing..." : req.isClubbed ? "Reject All" : "Reject"}
+                                                {actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id) ? "Processing..." : (req.isClubbed && req.requestIds?.length > 1) ? "Reject All" : "Reject"}
                                             </button>
                                             <button
                                                 className="btn-primary"
@@ -361,7 +361,7 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
                                                 }}
                                                 disabled={actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id)}
                                             >
-                                                {actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id) ? "Processing..." : req.isClubbed ? "Approve All" : "Approve"}
+                                                {actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id) ? "Processing..." : (req.isClubbed && req.requestIds?.length > 1) ? "Approve All" : "Approve"}
                                             </button>
                                         </>
                                     ) : null}

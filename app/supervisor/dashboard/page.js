@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import PaymentRequestForm from "@/components/PaymentRequestForm";
-import BillUploadForm from "@/components/BillUploadForm";
 import RecentBillsList from "@/components/RecentBillsList";
 import ShimmerLoader from "@/components/ShimmerLoader";
 
@@ -13,7 +12,6 @@ export default function SupervisorDashboard() {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [showBillForm, setShowBillForm] = useState(false);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -146,30 +144,24 @@ export default function SupervisorDashboard() {
                             >
                                 📊 Project Progress & Notes
                             </button>
-                            <button
-                                style={{ ...navBtnStyle, background: showBillForm ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.6)" }}
-                                onClick={() => setShowBillForm(!showBillForm)}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = "linear-gradient(135deg, var(--primary), var(--primary-dark, #1a56db))";
-                                    e.currentTarget.style.color = "#fff";
-                                    e.currentTarget.style.boxShadow = "0 4px 16px rgba(59,130,246,0.25)";
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = showBillForm ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.6)";
-                                    e.currentTarget.style.color = "var(--text-muted)";
-                                    e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.06)";
-                                }}
-                            >
-                                🧾 {showBillForm ? "Close Bill Form" : "Add Bills / Expenses"}
-                            </button>
+                             <button
+                                 style={navBtnStyle}
+                                 onClick={() => router.push("/supervisor/dashboard/add-bill")}
+                                 onMouseEnter={(e) => {
+                                     e.currentTarget.style.background = "linear-gradient(135deg, var(--primary), var(--primary-dark, #1a56db))";
+                                     e.currentTarget.style.color = "#fff";
+                                     e.currentTarget.style.boxShadow = "0 4px 16px rgba(59,130,246,0.25)";
+                                 }}
+                                 onMouseLeave={(e) => {
+                                     e.currentTarget.style.background = "rgba(255,255,255,0.6)";
+                                     e.currentTarget.style.color = "var(--text-muted)";
+                                     e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.06)";
+                                 }}
+                             >
+                                 🧾 Add Bills / Expenses
+                             </button>
                         </div>
 
-                        {showBillForm && (
-                            <BillUploadForm onSuccess={() => {
-                                setShowBillForm(false);
-                                setRefreshTrigger(prev => prev + 1);
-                            }} />
-                        )}
 
                         <RecentBillsList refreshTrigger={refreshTrigger} />
 
