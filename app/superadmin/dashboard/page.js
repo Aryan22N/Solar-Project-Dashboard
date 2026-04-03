@@ -168,7 +168,7 @@ export default function SuperAdminDashboard() {
                         <div className="fade-up" style={{ marginBottom: "36px" }}>
                             <h2 className="section-title">Manage Projects</h2>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
-                                {projects.map(project => (
+                                {projects.slice(0, 6).map(project => (
                                     <div key={project.id} className="glass-card" style={{ padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                         <div>
                                             <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "4px" }}>{project.name}</div>
@@ -224,6 +224,17 @@ export default function SuperAdminDashboard() {
                                     </div>
                                 ))}
                             </div>
+                            {projects.length > 6 && (
+                                <div style={{ textAlign: "center", marginTop: "24px" }}>
+                                    <button 
+                                        className="btn-ghost" 
+                                        onClick={() => router.push("/superadmin/projects/all")}
+                                        style={{ padding: "10px 32px", fontSize: "14px", fontWeight: 600, textDecoration: "underline" }}
+                                    >
+                                        Show All Projects ({projects.length})
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         <PaymentRequestList

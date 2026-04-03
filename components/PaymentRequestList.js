@@ -10,6 +10,7 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
     const [lastActionTimes, setLastActionTimes] = useState({}); // { "id-action": timestamp }
     const [projects, setProjects] = useState([]);
     const [selectedProjectId, setSelectedProjectId] = useState(null);
+    const [statusFilter, setStatusFilter] = useState(role === "PROJECT_MANAGER" ? "PENDING_PM" : "ALL"); // Explicit states
     const [actionInProgress, setActionInProgress] = useState(null); // Track which request is being processed
     const [showAll, setShowAll] = useState(false); // For "View More" functionality
     const [expandedNotes, setExpandedNotes] = useState({}); // { requestId: boolean }
@@ -20,7 +21,15 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
 
     const fetchRequests = async () => {
         try {
-            const res = await fetch("/api/payment-requests");
+            setLoading(true);
+            const params = new URLSearchParams();
+            if (role === "SUPER_ADMIN" || role === "PROJECT_MANAGER") {
+                params.append("status", statusFilter);
+            }
+            if (selectedProjectId) {
+                params.append("project", selectedProjectId);
+            }
+            const res = await fetch(`/api/payment-requests?${params.toString()}`);
             const data = await res.json();
             setRequests(Array.isArray(data) ? data : []);
         } catch (err) {
@@ -40,8 +49,8 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
             const projectList = Array.isArray(data) ? data : [];
             setProjects(projectList);
             if (projectList.length > 0 && selectedProjectId === null && !initialSelectRef.current) {
-                setSelectedProjectId(projectList[0].id);
-                initialSelectRef.current = true;
+                // setSelectedProjectId(projectList[0].id);
+                // initialSelectRef.current = true;
             }
         } catch (err) {
             console.error(err);
@@ -50,10 +59,13 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
 
     useEffect(() => {
         fetchRequests();
-        if (role === "SUPER_ADMIN" || (showFilter && role === "SUPERVISOR")) {
+    }, [refreshTrigger, role, showFilter, statusFilter, selectedProjectId]);
+
+    useEffect(() => {
+        if (role === "SUPER_ADMIN" || role === "PROJECT_MANAGER" || (showFilter && role === "SUPERVISOR")) {
             fetchProjects();
         }
-    }, [refreshTrigger, role, showFilter]);
+    }, [role, showFilter]);
 
     const addToast = (title, message, type = "success") => {
         const id = Date.now();
@@ -63,7 +75,7 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
         }, 4000);
     };
 
-    const handleAction = async (id, action, isClubbed = false, requestIds = [], projectId = null, currentPct = 0) => {
+    const handleAction = async (id, action, isClubbed = false, requestIds = [], projectId = null, currentPct = 0, isSubRequest = false) => {
         // id is used for the key (e.g., 'group-1-date' for clubbed)
         const actionKey = `${id}-${action}`;
         const now = Date.now();
@@ -108,11 +120,29 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
                 setLastActionTimes(prev => ({ ...prev, [actionKey]: now }));
 
                 // Optimistic update
-                setRequests(prev => prev.filter(req => {
-                    // Check both ID types for clubbed vs single
-                    const groupKey = req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id;
-                    return groupKey !== id;
-                }));
+                if (isSubRequest && action === "reject") {
+                    setRequests(prev => prev.map(req => {
+                        if (req.isClubbed && req.subRequests) {
+                            const updatedSubReqs = req.subRequests.filter(s => s.id !== id);
+                            if (updatedSubReqs.length === 0) return null; // Remove group completely if empty
+                            
+                            return {
+                                ...req,
+                                subRequests: updatedSubReqs,
+                                requestIds: updatedSubReqs.map(s => s.id),
+                                materials: updatedSubReqs.flatMap(s => s.materials),
+                                total_amount: updatedSubReqs.reduce((sum, s) => sum + parseFloat(s.total_amount), 0)
+                            };
+                        }
+                        return req;
+                    }).filter(Boolean));
+                } else {
+                    setRequests(prev => prev.filter(req => {
+                        // Check both ID types for clubbed vs single
+                        const groupKey = req.isClubbed ? (role === "PROJECT_MANAGER" ? `${req.project_id}-PM_GROUP` : `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}`) : req.id;
+                        return groupKey !== id;
+                    }));
+                }
 
                 addToast(
                     action === "approve" ? "Request Approved ✓" : "Request Rejected ✗",
@@ -193,68 +223,88 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
         }
     };
 
-    const filteredRequests = selectedProjectId && (role === "SUPER_ADMIN" || (showFilter && role === "SUPERVISOR"))
-        ? requests.filter(req => req.project_id === selectedProjectId)
-        : requests;
+    let filteredRequests = requests;
+    
+    if (selectedProjectId && (role === "SUPER_ADMIN" || (showFilter && role === "SUPERVISOR"))) {
+        filteredRequests = filteredRequests.filter(req => req.project_id === selectedProjectId);
+    }
+    
+    if (role === "SUPER_ADMIN" && statusFilter !== "ALL") {
+        filteredRequests = filteredRequests.filter(req => req.status === statusFilter);
+    }
 
     // Apply limit for display (if not showing all)
     const displayedRequests = !showAll && limit ? filteredRequests.slice(0, limit) : filteredRequests;
 
-    if (loading) {
-        return (
-            <div className="fade-up-2">
-                <style>{`
-                    @keyframes premium-shimmer-anim {
-                        0% { background-position: -1000px 0; }
-                        100% { background-position: 1000px 0; }
-                    }
-                    .premium-shimmer {
-                        background: #f1f5f9;
-                        background-image: linear-gradient(
-                            to right,
-                            #f1f5f9 0%,
-                            #e2e8f0 20%,
-                            #f1f5f9 40%,
-                            #f1f5f9 100%
-                        );
-                        background-repeat: no-repeat;
-                        background-size: 1000px 100%;
-                        display: block;
-                        position: relative;
-                        animation: premium-shimmer-anim 2s linear infinite;
-                    }
-                `}</style>
-                <h2 className="section-title">{role === "SUPERVISOR" ? "Recent Requests" : "Pending Approvals"}</h2>
-                <div className="premium-shimmer" style={{ height: "400px", width: "100%", borderRadius: "20px", border: "1px solid #e2e8f0" }}></div>
-            </div>
-        );
-    }
-
     return (
         <div className="fade-up-2">
+            <style>{`
+                @keyframes premium-shimmer-anim {
+                    0% { background-position: -1000px 0; }
+                    100% { background-position: 1000px 0; }
+                }
+                .premium-shimmer {
+                    background: #f1f5f9;
+                    background-image: linear-gradient(
+                        to right,
+                        #f1f5f9 0%,
+                        #e2e8f0 20%,
+                        #f1f5f9 40%,
+                        #f1f5f9 100%
+                    );
+                    background-repeat: no-repeat;
+                    background-size: 1000px 100%;
+                    display: block;
+                    position: relative;
+                    animation: premium-shimmer-anim 2s linear infinite;
+                }
+            `}</style>
             <Toast toasts={toasts} />
             <h2 className="section-title">{role === "SUPERVISOR" ? "Recent Requests" : "Pending Approvals"}</h2>
 
-            {(role === "SUPER_ADMIN" || (showFilter && role === "SUPERVISOR")) && (
-                <div style={{ marginBottom: "20px" }}>
-                    <label className="stat-label">Filter by Project</label>
-                    <select
-                        className="input-field"
-                        style={{ maxWidth: "300px", marginTop: "8px" }}
-                        value={selectedProjectId || ""}
-                        onChange={(e) => setSelectedProjectId(e.target.value ? parseInt(e.target.value) : null)}
-                    >
-                        <option value="">All Projects</option>
-                        {projects.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                    </select>
+            {(role === "SUPER_ADMIN" || role === "PROJECT_MANAGER" || (showFilter && role === "SUPERVISOR")) && (
+                <div style={{ display: "flex", gap: "16px", marginBottom: "20px", flexWrap: "wrap" }}>
+                    <div>
+                        <label className="stat-label">Filter by Project</label>
+                        <select
+                            className="input-field"
+                            style={{ maxWidth: "300px", marginTop: "8px" }}
+                            value={selectedProjectId || ""}
+                            onChange={(e) => setSelectedProjectId(e.target.value ? parseInt(e.target.value) : null)}
+                            disabled={loading}
+                        >
+                            <option value="">All Projects</option>
+                            {projects.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    {(role === "SUPER_ADMIN" || role === "PROJECT_MANAGER") && (
+                        <div>
+                            <label className="stat-label">Filter by Status</label>
+                            <select
+                                className="input-field"
+                                style={{ maxWidth: "250px", marginTop: "8px" }}
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                disabled={loading}
+                            >
+                                <option value="ALL">All Requests</option>
+                                <option value="PENDING_ADMIN">Manager Approved</option>
+                                <option value="PENDING_PM">Pending PM</option>
+                                <option value="PAID">Paid</option>
+                                <option value="REJECTED">Rejected</option>
+                            </select>
+                        </div>
+                    )}
                 </div>
             )}
 
-            {filteredRequests.length === 0 ? (
+            {loading ? (
+                <div className="premium-shimmer" style={{ height: "400px", width: "100%", borderRadius: "20px", border: "1px solid #e2e8f0" }}></div>
+            ) : filteredRequests.length === 0 ? (
                 <div className="glass-card" style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
-                    {(role === "SUPER_ADMIN" || (showFilter && role === "SUPERVISOR")) && selectedProjectId
+                    {(role === "SUPER_ADMIN" || role === "PROJECT_MANAGER" || (showFilter && role === "SUPERVISOR")) && selectedProjectId
                         ? "No payment requests found for this project."
                         : "No payment requests found."}
                 </div>
@@ -287,22 +337,59 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
                                         </div>
                                     )}
                                 </div>
-                                <div style={{ marginTop: "12px", display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                                    {req.materials.map((m, i) => (
-                                        <div key={i} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", padding: "4px 10px", background: "rgba(15, 23, 42, 0.04)", borderRadius: "8px", color: "var(--text-muted)", border: "1px solid rgba(15, 23, 42, 0.05)" }}>
-                                            <span>{m.name} (x{m.quantity})</span>
-                                            {m.image_url && (
-                                                <>
+                                <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                                    {req.isClubbed && req.subRequests && role === "PROJECT_MANAGER" ? (
+                                        req.subRequests.map((sub) => (
+                                            <div key={sub.id} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", padding: "8px 12px", background: "rgba(15, 23, 42, 0.02)", borderRadius: "8px", border: "1px dashed var(--border)" }}>
+                                                <div style={{ flex: 1, display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                                                    {sub.materials.map((m, i) => (
+                                                        <div key={i} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", padding: "4px 10px", background: "#fff", borderRadius: "6px", color: "var(--text-muted)", border: "1px solid rgba(15, 23, 42, 0.05)" }}>
+                                                            <span>{m.name} (x{m.quantity})</span>
+                                                            {m.image_url && (
+                                                                <button
+                                                                    onClick={() => setPreviewImage(m.image_url)}
+                                                                    style={{ border: "none", background: "rgba(59, 130, 246, 0.1)", color: "var(--primary)", padding: "2px 6px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}
+                                                                >
+                                                                    📷 VIEW
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>
+                                                    ₹{parseFloat(sub.total_amount).toLocaleString()}
+                                                </div>
+                                                {req.status === "PENDING_PM" && (
                                                     <button
-                                                        onClick={() => setPreviewImage(m.image_url)}
-                                                        style={{ border: "none", background: "rgba(59, 130, 246, 0.1)", color: "var(--primary)", padding: "2px 6px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleAction(sub.id, "reject", false, [], sub.project_id, req.progress?.percentage || 0, true);
+                                                        }}
+                                                        title="Reject & Remove this specific request"
+                                                        style={{ border: "none", background: "rgba(248, 113, 113, 0.1)", color: "#ef4444", padding: "4px 8px", borderRadius: "4px", cursor: "pointer", fontSize: "14px", display: "flex", alignItems: "center", justifyContent: "center" }}
                                                     >
-                                                        📷 VIEW
+                                                        ❌ Remove
                                                     </button>
-                                                </>
-                                            )}
+                                                )}
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                                            {req.materials.map((m, i) => (
+                                                <div key={i} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", padding: "4px 10px", background: "rgba(15, 23, 42, 0.04)", borderRadius: "8px", color: "var(--text-muted)", border: "1px solid rgba(15, 23, 42, 0.05)" }}>
+                                                    <span>{m.name} (x{m.quantity})</span>
+                                                    {m.image_url && (
+                                                        <button
+                                                            onClick={() => setPreviewImage(m.image_url)}
+                                                            style={{ border: "none", background: "rgba(59, 130, 246, 0.1)", color: "var(--primary)", padding: "2px 6px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}
+                                                        >
+                                                            📷 VIEW
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                    )}
                                 </div>
 
 
@@ -320,15 +407,15 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
                                             <button
                                                 className="btn-ghost"
                                                 onClick={() => {
-                                                    const groupId = req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id;
-                                                    handleAction(groupId, "reject", req.isClubbed, req.requestIds, req.project_id, req.progress.percentage);
+                                                    const groupId = req.isClubbed ? (role === "PROJECT_MANAGER" ? `${req.project_id}-PM_GROUP` : `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}`) : req.id;
+                                                    handleAction(groupId, "reject", req.isClubbed, req.requestIds, req.project_id, req.progress?.percentage || 0);
                                                 }}
                                                 style={{
                                                     color: "#64748b",
                                                     flex: 1,
                                                     whiteSpace: "nowrap",
-                                                    opacity: actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id) ? 0.5 : 1,
-                                                    cursor: actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id) ? 'not-allowed' : 'pointer',
+                                                    opacity: actionInProgress === (req.isClubbed ? (role === "PROJECT_MANAGER" ? `${req.project_id}-PM_GROUP` : `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}`) : req.id) ? 0.5 : 1,
+                                                    cursor: actionInProgress === (req.isClubbed ? (role === "PROJECT_MANAGER" ? `${req.project_id}-PM_GROUP` : `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}`) : req.id) ? 'not-allowed' : 'pointer',
                                                     border: '1px solid var(--border)'
                                                 }}
                                                 onMouseEnter={(e) => {
@@ -341,27 +428,27 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
                                                     e.target.style.borderColor = 'var(--border)';
                                                     e.target.style.color = '#64748b';
                                                 }}
-                                                disabled={actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id)}
+                                                disabled={actionInProgress === (req.isClubbed ? (role === "PROJECT_MANAGER" ? `${req.project_id}-PM_GROUP` : `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}`) : req.id)}
                                             >
-                                                {actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id) ? "Processing..." : (req.isClubbed && req.requestIds?.length > 1) ? "Reject All" : "Reject"}
+                                                {actionInProgress === (req.isClubbed ? (role === "PROJECT_MANAGER" ? `${req.project_id}-PM_GROUP` : `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}`) : req.id) ? "Processing..." : (req.isClubbed && req.requestIds?.length > 1) ? "Reject All" : "Reject"}
                                             </button>
                                             <button
                                                 className="btn-primary"
                                                 onClick={() => {
-                                                    const groupId = req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id;
-                                                    handleAction(groupId, "approve", req.isClubbed, req.requestIds, req.project_id, req.progress.percentage);
+                                                    const groupId = req.isClubbed ? (role === "PROJECT_MANAGER" ? `${req.project_id}-PM_GROUP` : `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}`) : req.id;
+                                                    handleAction(groupId, "approve", req.isClubbed, req.requestIds, req.project_id, req.progress?.percentage || 0);
                                                 }}
                                                 style={{
                                                     width: "auto",
                                                     padding: "8px 20px",
                                                     flex: 1,
                                                     whiteSpace: "nowrap",
-                                                    opacity: actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id) ? 0.5 : 1,
-                                                    cursor: actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id) ? 'not-allowed' : 'pointer'
+                                                    opacity: actionInProgress === (req.isClubbed ? (role === "PROJECT_MANAGER" ? `${req.project_id}-PM_GROUP` : `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}`) : req.id) ? 0.5 : 1,
+                                                    cursor: actionInProgress === (req.isClubbed ? (role === "PROJECT_MANAGER" ? `${req.project_id}-PM_GROUP` : `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}`) : req.id) ? 'not-allowed' : 'pointer'
                                                 }}
-                                                disabled={actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id)}
+                                                disabled={actionInProgress === (req.isClubbed ? (role === "PROJECT_MANAGER" ? `${req.project_id}-PM_GROUP` : `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}`) : req.id)}
                                             >
-                                                {actionInProgress === (req.isClubbed ? `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}` : req.id) ? "Processing..." : (req.isClubbed && req.requestIds?.length > 1) ? "Approve All" : "Approve"}
+                                                {actionInProgress === (req.isClubbed ? (role === "PROJECT_MANAGER" ? `${req.project_id}-PM_GROUP` : `${req.project_id}-${new Date(req.created_at).toLocaleDateString("en-IN")}-${req.status}`) : req.id) ? "Processing..." : (req.isClubbed && req.requestIds?.length > 1) ? "Approve All" : "Approve"}
                                             </button>
                                         </>
                                     ) : null}

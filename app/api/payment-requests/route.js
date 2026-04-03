@@ -5,8 +5,15 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic"; // Rebuild after cache clear
 
 // GET: Fetch requests based on role
-export async function GET() {
+export async function GET(req) {
     try {
+        const { searchParams } = new URL(req.url);
+        const limitParam = searchParams.get('limit');
+        // Default to a sane limit to prevent system from hanging if there are thousands of records
+        const limit = limitParam ? parseInt(limitParam) : 100;
+        const statusParam = searchParams.get('status');
+        const projectParam = searchParams.get('project');
+
         const user = await getUser();
         if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -18,27 +25,77 @@ export async function GET() {
             requests = await prisma.paymentRequest.findMany({
                 where: { supervisor_id: user.id },
                 include: { project: true, materials: true },
-                orderBy: { created_at: "desc" }
+                orderBy: { created_at: "desc" },
+                take: limit
             });
         } else if (hasRole(user, "PROJECT_MANAGER")) {
+            const pmWhere = {};
+            if (statusParam && statusParam !== "ALL") {
+                pmWhere.status = statusParam;
+            } else if (!statusParam) {
+                pmWhere.status = "PENDING_PM";
+            }
+            if (projectParam) pmWhere.project_id = parseInt(projectParam);
+
             requests = await prisma.paymentRequest.findMany({
-                where: { status: "PENDING_PM" },
+                where: pmWhere,
                 include: { 
                     project: true, 
                     materials: true, 
                     supervisor: { select: { name: true } }
                 },
-                orderBy: { created_at: "desc" }
+                orderBy: { created_at: "desc" },
+                take: limit
             });
+
+            // Project-wise clubbing for Manager
+            const clubbedMap = {};
+            for (const req of requests) {
+                const clubKey = `${req.project_id}-PM_GROUP`;
+                if (!clubbedMap[clubKey]) {
+                    clubbedMap[clubKey] = {
+                        ...req,
+                        isClubbed: true,
+                        requestIds: [req.id],
+                        _materials: [...req.materials],
+                        _total_amount: parseFloat(req.total_amount),
+                        _supervisor_names: [req.supervisor?.name || "Self"],
+                        subRequests: [req]
+                    };
+                } else {
+                    clubbedMap[clubKey].requestIds.push(req.id);
+                    clubbedMap[clubKey]._materials.push(...req.materials);
+                    clubbedMap[clubKey]._total_amount += parseFloat(req.total_amount);
+                    if (req.supervisor?.name && !clubbedMap[clubKey]._supervisor_names.includes(req.supervisor.name)) {
+                        clubbedMap[clubKey]._supervisor_names.push(req.supervisor.name);
+                    }
+                    clubbedMap[clubKey].subRequests.push(req);
+                }
+            }
+
+            requests = Object.values(clubbedMap).map(c => ({
+                ...c,
+                materials: c._materials,
+                total_amount: c._total_amount,
+                supervisor: { name: c._supervisor_names.join(", ") }
+            }));
+            
+            requests.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         } else if (hasRole(user, "SUPER_ADMIN")) {
+            const adminWhere = {};
+            if (statusParam && statusParam !== "ALL") adminWhere.status = statusParam;
+            if (projectParam) adminWhere.project_id = parseInt(projectParam);
+
             requests = await prisma.paymentRequest.findMany({
+                where: adminWhere,
                 include: { 
                     project: true, 
                     materials: true, 
                     supervisor: { select: { name: true } },
                     pm: { select: { name: true } }
                 },
-                orderBy: { created_at: "desc" }
+                orderBy: { created_at: "desc" },
+                take: limit
             });
 
             // Day-wise clubbing for Super Admin
@@ -84,28 +141,29 @@ export async function GET() {
             const projectIds = [...new Set(requests.map(r => r.project_id))];
             const progressMap = {};
             
-            for (const pid of projectIds) {
-                // Initialize with defaults
-                progressMap[pid] = { percentage: 0, notes: [] };
-
-                const latest = await prisma.projectProgress.findMany({
-                    where: { project_id: pid },
+            if (projectIds.length > 0) {
+                const allProgresses = await prisma.projectProgress.findMany({
+                    where: { project_id: { in: projectIds } },
                     orderBy: { created_at: "desc" },
-                    take: 5,
                     include: { user: { select: { name: true, role: true } } }
                 });
-                if (latest.length > 0) {
-                    // Max percentage across all entries
-                    const maxPct = Math.max(...latest.map(p => p.percentage));
-                    progressMap[pid] = { 
-                        percentage: maxPct, 
-                        notes: latest.map(n => ({
-                            percentage: n.percentage,
-                            date: n.date,
-                            notes: n.notes,
-                            user: n.user
-                        }))
-                    };
+
+                for (const pid of projectIds) {
+                    const latest = allProgresses.filter(p => p.project_id === pid).slice(0, 5);
+                    if (latest.length > 0) {
+                        const maxPct = Math.max(...latest.map(p => p.percentage));
+                        progressMap[pid] = { 
+                            percentage: maxPct, 
+                            notes: latest.map(n => ({
+                                percentage: n.percentage,
+                                date: n.date,
+                                notes: n.notes,
+                                user: n.user
+                            }))
+                        };
+                    } else {
+                        progressMap[pid] = { percentage: 0, notes: [] };
+                    }
                 }
             }
 
