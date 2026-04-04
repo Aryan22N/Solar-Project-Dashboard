@@ -12,6 +12,7 @@ export default function PaymentHistory() {
     const [requests, setRequests] = useState([]);
     const [projects, setProjects] = useState([]);
     const [selectedProjectId, setSelectedProjectId] = useState(null);
+    const [statusFilter, setStatusFilter] = useState("ALL");
     const [loading, setLoading] = useState(true);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const router = useRouter();
@@ -28,7 +29,8 @@ export default function PaymentHistory() {
     const fetchHistory = async () => {
         try {
             setLoading(true);
-            const res = await fetch("/api/payment-requests");
+            const url = `/api/payment-requests?limit=2000${selectedProjectId ? `&project=${selectedProjectId}` : ''}${statusFilter !== "ALL" ? `&status=${statusFilter}` : ''}`;
+            const res = await fetch(url);
             const data = await res.json();
             setRequests(Array.isArray(data) ? data : []);
         } catch (err) {
@@ -50,6 +52,9 @@ export default function PaymentHistory() {
 
     useEffect(() => {
         fetchHistory();
+    }, [selectedProjectId, statusFilter]);
+
+    useEffect(() => {
         fetchProjects();
     }, []);
 
@@ -57,60 +62,9 @@ export default function PaymentHistory() {
         window.print();
     };
 
-    const filteredRequests = selectedProjectId
-        ? requests.filter(req => req.project_id === selectedProjectId)
-        : requests;
+    const filteredRequests = requests;
 
-    if (loading) return (
-        <div style={{ minHeight: "100vh" }}>
-            <div className="bg-mesh no-print" />
-            <header className="page-header no-print">
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <Image
-                        src="/Logo_1.png"
-                        alt="Solar Logo"
-                        width={240}
-                        height={36}
-                        style={{ borderRadius: '8px' }}
-                    />
-                </div>
-                <div className="nav-desktop">
-                    <Link href="/superadmin/dashboard" className="btn-ghost" style={{ textDecoration: "none" }}>← Back to Dashboard</Link>
-                    <button className="btn-primary" style={{ width: "auto", padding: "8px 20px" }}>🖨️ Print Records</button>
-                    <button className="btn-ghost">Sign Out</button>
-                </div>
-            </header>
-            <main className="page-content">
-                <div className="fade-up" style={{ marginBottom: "36px" }}>
-                    <div className="shimmer-line shimmer-medium" style={{ width: '300px', height: '32px', marginBottom: '8px' }}></div>
-                    <div className="shimmer-line shimmer-long" style={{ width: '500px', height: '18px' }}></div>
-                </div>
-                <CardShimmerLoader />
-            </main>
-            <style>{`
-                .shimmer-line {
-                    background: linear-gradient(
-                        90deg,
-                        rgba(255, 255, 255, 0.03) 0%,
-                        rgba(255, 255, 255, 0.08) 50%,
-                        rgba(255, 255, 255, 0.03) 100%
-                    );
-                    background-size: 1000px 100%;
-                    animation: shimmer 2s infinite linear;
-                    border-radius: 4px;
-                }
-                @keyframes shimmer {
-                    0% {
-                        background-position: -1000px 0;
-                    }
-                    100% {
-                        background-position: 1000px 0;
-                    }
-                }
-            `}</style>
-        </div>
-    );
-
+    // Removed the global if (loading) blockade to let the layout persist
     return (
         <div style={{ minHeight: "100vh" }}>
             <div className="bg-mesh no-print" />
@@ -178,36 +132,61 @@ export default function PaymentHistory() {
                 </div>
 
                 <div className="no-print" style={{ marginBottom: "24px" }}>
-                    <label className="stat-label">Filter by Project</label>
-                    <select 
-                        className="input-field" 
-                        style={{ maxWidth: "300px", marginTop: "8px" }}
-                        value={selectedProjectId || ""}
-                        onChange={(e) => setSelectedProjectId(e.target.value ? parseInt(e.target.value) : null)}
-                    >
-                        <option value="">All Projects</option>
-                        {projects.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                    </select>
+                    <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+                        <div>
+                            <label className="stat-label">Filter by Project</label>
+                            <select 
+                                className="input-field" 
+                                style={{ maxWidth: "300px", marginTop: "8px" }}
+                                value={selectedProjectId || ""}
+                                onChange={(e) => setSelectedProjectId(e.target.value ? parseInt(e.target.value) : null)}
+                            >
+                                <option value="">All Projects</option>
+                                {projects.map(p => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="stat-label">Filter by Status</label>
+                            <select
+                                className="input-field"
+                                style={{ maxWidth: "250px", marginTop: "8px" }}
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                            >
+                                <option value="ALL">All Requests</option>
+                                <option value="PENDING_ADMIN">Manager Approved</option>
+                                <option value="PENDING_PM">Pending PM</option>
+                                <option value="PAID">Paid</option>
+                                <option value="REJECTED">Rejected</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="table-responsive" style={{ overflowX: "auto", overflowY: "auto", maxWidth: "100%" }}>
-                    <div className="glass-card printable-area" style={{ padding: "0", minWidth: "1000px" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                <div className="table-responsive" style={{ overflowX: "auto", maxWidth: "100%" }}>
+                    <div className="glass-card printable-area" style={{ padding: "0", width: "100%", minWidth: "900px" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", tableLayout: "fixed" }}>
                         <thead>
                             <tr style={{ borderBottom: "1px solid var(--border)", background: "rgba(255,255,255,0.02)" }}>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "12%" }}>Date</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "20%" }}>Project</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "15%" }}>Requested By</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "15%" }}>Approver (PM)</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "23%" }}>Materials</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "10%" }}>Amount</th>
-                                <th style={{ padding: "16px 24px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "10%" }}>Status</th>
+                                <th style={{ padding: "16px 12px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "10%" }}>Date</th>
+                                <th style={{ padding: "16px 12px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "18%" }}>Project</th>
+                                <th style={{ padding: "16px 12px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "12%" }}>Requested By</th>
+                                <th style={{ padding: "16px 12px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "12%" }}>Approver (PM)</th>
+                                <th style={{ padding: "16px 12px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "28%" }}>Materials</th>
+                                <th style={{ padding: "16px 12px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "10%" }}>Amount</th>
+                                <th style={{ padding: "16px 12px", fontSize: "12px", color: "var(--text-muted)", textTransform: "uppercase", width: "10%" }}>Status</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredRequests.length === 0 ? (
+                            {loading ? (
+                                <tr>
+                                    <td colSpan="7" style={{ padding: "40px 24px" }}>
+                                        <CardShimmerLoader />
+                                    </td>
+                                </tr>
+                            ) : filteredRequests.length === 0 ? (
                                 <tr>
                                     <td colSpan="7" style={{ padding: "40px 24px", textAlign: "center", color: "var(--text-muted)", fontSize: "14px" }}>
                                         {selectedProjectId ? "No payment requests found for this project." : "No payment requests found."}
@@ -216,15 +195,17 @@ export default function PaymentHistory() {
                             ) : (
                                 filteredRequests.map((req) => (
                                 <tr key={req.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                                    <td style={{ padding: "16px 24px", fontSize: "14px" }}>{new Date(req.created_at).toLocaleDateString()}</td>
-                                    <td style={{ padding: "16px 24px", fontSize: "14px", fontWeight: 600 }}>{req.project?.name}</td>
-                                    <td style={{ padding: "16px 24px", fontSize: "14px" }}>{req.supervisor?.name || "Self"}</td>
-                                    <td style={{ padding: "16px 24px", fontSize: "14px" }}>{req.pm?.name || "Pending/N/A"}</td>
-                                    <td style={{ padding: "16px 24px", fontSize: "13px", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                                        {req.materials.map(m => `${m.name} (x${m.quantity})`).join(", ")}
+                                    <td style={{ padding: "16px 12px", fontSize: "14px" }}>{new Date(req.created_at).toLocaleDateString()}</td>
+                                    <td style={{ padding: "16px 12px", fontSize: "14px", fontWeight: 600 }}>{req.project?.name}</td>
+                                    <td style={{ padding: "16px 12px", fontSize: "14px" }}>{req.supervisor?.name || "Self"}</td>
+                                    <td style={{ padding: "16px 12px", fontSize: "14px" }}>{req.pm?.name || "Pending/N/A"}</td>
+                                    <td style={{ padding: "16px 12px", fontSize: "13px", color: "var(--text-muted)" }}>
+                                        <div className="print-wrap-materials" style={{ wordWrap: "break-word", whiteSpace: "normal" }}>
+                                            {req.materials.map(m => `${m.name} (x${m.quantity})`).join(", ")}
+                                        </div>
                                     </td>
-                                    <td style={{ padding: "16px 24px", fontSize: "15px", fontWeight: 700 }}>₹{parseFloat(req.total_amount).toLocaleString()}</td>
-                                    <td style={{ padding: "16px 24px" }}>
+                                    <td style={{ padding: "16px 12px", fontSize: "15px", fontWeight: 700 }}>₹{parseFloat(req.total_amount).toLocaleString()}</td>
+                                    <td style={{ padding: "16px 12px" }}>
                                         <span className="role-badge" style={{
                                             background: req.status === "PAID" ? "rgba(16,185,129,0.1)" : "rgba(255,255,255,0.05)",
                                             color: req.status === "PAID" ? "#10b981" : "var(--text-muted)",
@@ -264,6 +245,21 @@ export default function PaymentHistory() {
                     .page-content {
                         padding: 0 !important;
                         max-width: 100% !important;
+                    }
+                    .table-responsive {
+                        overflow: visible !important;
+                    }
+                    .printable-area {
+                        min-width: auto !important;
+                        width: 100% !important;
+                    }
+                    .print-wrap-materials {
+                        max-height: none !important;
+                        overflow: visible !important;
+                    }
+                    @page {
+                        size: landscape;
+                        margin: 1cm;
                     }
                     .role-badge {
                         border: 1px solid #ccc !important;
