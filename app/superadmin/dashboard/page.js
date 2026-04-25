@@ -152,15 +152,7 @@ export default function SuperAdminDashboard() {
                 ) : (
                     <>
 
-                        {/* Welcome */}
-                        <div className="fade-up" style={{ marginBottom: "36px" }}>
-                            <h1 style={{ fontSize: "30px", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "8px" }}>
-                                Good day, Admin 👋
-                            </h1>
-                            <p style={{ color: "var(--text-muted)", fontSize: "15px" }}>
-                                Review approved requests and finalize payments below.
-                            </p>
-                        </div>
+
                         <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
                             <button className="btn-primary" style={{ width: "auto", padding: "10px 32px" }} onClick={() => router.push("/superadmin/projects/progress")}>
                                 View Progress Tracker and Notes

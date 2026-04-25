@@ -96,15 +96,7 @@ export default function ManagerDashboard() {
                     <ShimmerLoader />
                 ) : (
                     <>
-                        {/* Welcome */}
-                        <div className="fade-up" style={{ marginBottom: "36px" }}>
-                            <h1 style={{ fontSize: "30px", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "8px" }}>
-                                Welcome back, Manager 👋
-                            </h1>
-                            <p style={{ color: "var(--text-muted)", fontSize: "15px" }}>
-                                Review and approve supervisor payment requests from the list below.
-                            </p>
-                        </div>
+
 
                         <div style={{ display: "flex", gap: "12px", marginBottom: "24px", flexWrap: "wrap" }}>
                             <button 

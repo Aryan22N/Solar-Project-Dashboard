@@ -99,15 +99,7 @@ export default function SupervisorDashboard() {
                     <ShimmerLoader />
                 ) : (
                     <>
-                        {/* Welcome */}
-                        <div className="fade-up" style={{ marginBottom: "36px" }}>
-                            <h1 style={{ fontSize: "30px", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "8px" }}>
-                                Good morning, Supervisor 👋
-                            </h1>
-                            <p style={{ color: "var(--text-muted)", fontSize: "15px" }}>
-                                Submit and track material payment requests below.
-                            </p>
-                        </div>
+
 
 
                         {/* Navigation Buttons */}
