@@ -78,6 +78,10 @@ export default function SuperAdminDashboard() {
                     <span>🖼️</span> Stored Images
                 </Link>
 
+                <Link href="/superadmin/members" className="mobile-menu-link" onClick={() => setIsMenuOpen(false)}>
+                    <span>👥</span> Manage Members
+                </Link>
+
                 <button className="mobile-menu-link" style={{ width: "100%", background: "rgba(248, 113, 113, 0.05)", borderColor: "rgba(248, 113, 113, 0.2)", color: "var(--danger)" }} onClick={handleLogout}>
                     <span>🚪</span> Sign Out
                 </button>
@@ -114,6 +118,7 @@ export default function SuperAdminDashboard() {
                     <Link href="/superadmin/projects/progress" className="btn-ghost" style={{ textDecoration: "none", height: "36px", display: "inline-flex", alignItems: "center" }}>📈 Project Progress</Link>
                     <Link href="/superadmin/gallery" className="btn-ghost" style={{ textDecoration: "none", height: "36px", display: "inline-flex", alignItems: "center" }}>🖼️ Gallery</Link>
                     <Link href="/superadmin/history" className="btn-ghost" style={{ textDecoration: "none", height: "36px", display: "inline-flex", alignItems: "center" }}>📜 History</Link>
+                    <Link href="/superadmin/members" className="btn-ghost" style={{ textDecoration: "none", height: "36px", display: "inline-flex", alignItems: "center" }}>👥 Members</Link>
                     <span className="role-badge role-super" style={{ height: "36px", display: "inline-flex", alignItems: "center" }}>⚡ Super Admin</span>
                     <button className="btn-ghost" style={{ height: "36px", display: "inline-flex", alignItems: "center" }} onClick={handleLogout}>Sign Out</button>
                 </div>
