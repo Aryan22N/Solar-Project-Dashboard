@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Toast from "./Toast";
 
 export default function PaymentRequestList({ refreshTrigger, role, limit = null, showFilter = false }) {
@@ -339,40 +340,53 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
                                 </div>
                                 <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
                                     {req.isClubbed && req.subRequests && role === "PROJECT_MANAGER" ? (
-                                        req.subRequests.map((sub) => (
-                                            <div key={sub.id} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "10px", padding: "8px 12px", background: "rgba(15, 23, 42, 0.02)", borderRadius: "8px", border: "1px dashed var(--border)" }}>
-                                                <div style={{ flex: 1, display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                                                    {sub.materials.map((m, i) => (
-                                                        <div key={i} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", padding: "4px 10px", background: "#fff", borderRadius: "6px", color: "var(--text-muted)", border: "1px solid rgba(15, 23, 42, 0.05)" }}>
-                                                            <span>{m.name} (x{m.quantity})</span>
-                                                            {m.image_url && (
-                                                                <button
-                                                                    onClick={() => setPreviewImage(m.image_url)}
-                                                                    style={{ border: "none", background: "rgba(59, 130, 246, 0.1)", color: "var(--primary)", padding: "2px 6px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}
-                                                                >
-                                                                    📷 VIEW
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                                <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>
-                                                    ₹{parseFloat(sub.total_amount).toLocaleString()}
-                                                </div>
-                                                {req.status === "PENDING_PM" && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleAction(sub.id, "reject", false, [], sub.project_id, req.progress?.percentage || 0, true);
-                                                        }}
-                                                        title="Reject & Remove this specific request"
-                                                        style={{ border: "none", background: "rgba(248, 113, 113, 0.1)", color: "#ef4444", padding: "4px 8px", borderRadius: "4px", cursor: "pointer", fontSize: "14px", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                                    >
-                                                        ❌ Remove
-                                                    </button>
-                                                )}
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                                                {req.materials.map((m, i) => (
+                                                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", padding: "4px 10px", background: "rgba(15, 23, 42, 0.04)", borderRadius: "8px", color: "var(--text-muted)", border: "1px solid rgba(15, 23, 42, 0.05)" }}>
+                                                        <span>{m.name} (x{m.quantity})</span>
+                                                        {m.image_url && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    console.log("Clicked preview for:", m.image_url);
+                                                                    setPreviewImage(m.image_url);
+                                                                }}
+                                                                style={{ border: "none", background: "rgba(59, 130, 246, 0.1)", color: "var(--primary)", padding: "2px 6px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}
+                                                            >
+                                                                📷 VIEW
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
                                             </div>
-                                        ))
+                                            
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "8px", borderTop: "1px dashed var(--border)", paddingTop: "12px" }}>
+                                                {req.subRequests.map((sub) => (
+                                                    <div key={sub.id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "6px 12px", background: "rgba(15, 23, 42, 0.02)", borderRadius: "6px", border: "1px solid rgba(15, 23, 42, 0.05)" }}>
+                                                        <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-primary)" }}>
+                                                            Req #{sub.id} (₹{parseFloat(sub.total_amount).toLocaleString()})
+                                                        </span>
+                                                        {req.status === "PENDING_PM" && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    handleAction(sub.id, "reject", false, [], sub.project_id, req.progress?.percentage || 0, true);
+                                                                }}
+                                                                title="Reject & Remove this specific request"
+                                                                style={{ border: "none", background: "rgba(248, 113, 113, 0.1)", color: "#ef4444", padding: "4px 8px", borderRadius: "4px", cursor: "pointer", fontSize: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                                            >
+                                                                ❌ Remove
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     ) : (
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
                                             {req.materials.map((m, i) => (
@@ -380,7 +394,12 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
                                                     <span>{m.name} (x{m.quantity})</span>
                                                     {m.image_url && (
                                                         <button
-                                                            onClick={() => setPreviewImage(m.image_url)}
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                setPreviewImage(m.image_url);
+                                                            }}
                                                             style={{ border: "none", background: "rgba(59, 130, 246, 0.1)", color: "var(--primary)", padding: "2px 6px", borderRadius: "4px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}
                                                         >
                                                             📷 VIEW
@@ -496,57 +515,23 @@ export default function PaymentRequestList({ refreshTrigger, role, limit = null,
                     </button>
                 </div>
             )}
-            {/* Image Preview Modal */}
-            {previewImage && (
-                <div
-                    style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: "rgba(0,0,0,0.8)",
-                        backdropFilter: "blur(8px)",
-                        zIndex: 2000,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: "20px"
-                    }}
+            {/* Image Preview Modal via Portal to avoid stacking context issues */}
+            {previewImage && typeof window !== "undefined" && createPortal(
+                <div 
+                    style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.9)", backdropFilter: "blur(10px)", zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}
                     onClick={() => setPreviewImage(null)}
                 >
-                    <div
-                        style={{ position: "relative", maxWidth: "90%", maxHeight: "90%", borderRadius: "16px", overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)" }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <img src={previewImage} alt="Material Preview" style={{ maxWidth: "100%", maxHeight: "80vh", display: "block" }} />
-                        <button
+                    <div style={{ position: "relative", maxWidth: "95%", maxHeight: "95%" }} onClick={(e) => e.stopPropagation()}>
+                        <img src={previewImage} alt="Material Preview" style={{ maxWidth: "100%", maxHeight: "90vh", borderRadius: "12px", objectFit: "contain" }} />
+                        <button 
                             onClick={() => setPreviewImage(null)}
-                            style={{
-                                position: "absolute",
-                                top: "15px",
-                                right: "15px",
-                                background: "#fff",
-                                border: "none",
-                                borderRadius: "50%",
-                                width: "32px",
-                                height: "32px",
-                                cursor: "pointer",
-                                fontSize: "18px",
-                                fontWeight: "700",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                boxShadow: "0 4px 12px rgba(0,0,0,0.2)"
-                            }}
+                            style={{ position: "absolute", top: "-40px", right: "0", background: "none", border: "none", color: "#fff", fontSize: "24px", cursor: "pointer", zIndex: 100000 }}
                         >
-                            ✕
+                            ✕ Close
                         </button>
-                        <div style={{ background: "#fff", padding: "12px 20px", fontSize: "14px", fontWeight: "600", color: "var(--text-primary)" }}>
-                            Material Evidence / Receipt
-                        </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
